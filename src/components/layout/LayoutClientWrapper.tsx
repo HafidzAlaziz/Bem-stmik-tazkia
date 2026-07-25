@@ -16,7 +16,8 @@ export default function LayoutClientWrapper({
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
   const isAdminPage = pathname?.startsWith("/admin") || false;
-  const hideLayout = isLoginPage || isAdminPage;
+  const isDashboardPage = pathname?.startsWith("/dashboard") || false;
+  const hideLayout = isLoginPage || isAdminPage || isDashboardPage;
 
   useEffect(() => {
     const showElement = (el: Element) => el.classList.add("is-visible");

@@ -30,8 +30,8 @@ export default async function UserDashboardPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <main className="min-h-screen bg-[var(--color-background)] pt-28 pb-32">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full">
+      <div className="w-full">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
@@ -59,6 +59,6 @@ export default async function UserDashboardPage() {
           <DashboardKaryaList initialKaryaList={karyaList || []} />
         </div>
       </div>
-    </main>
+    </div>
   );
 }

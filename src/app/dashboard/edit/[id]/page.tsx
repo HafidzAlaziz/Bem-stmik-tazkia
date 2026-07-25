@@ -295,8 +295,8 @@ export default function EditKaryaPage() {
   const labelClass = "block text-sm font-semibold text-on-surface mb-1.5";
 
   return (
-    <main className="min-h-screen bg-[var(--color-background)] pt-28 pb-32">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div className="mb-8">
           <Link href="/dashboard" onClick={(e) => handleBackNavigation(e, "/dashboard")} className="inline-flex items-center gap-2 text-on-surface-variant hover:text-[var(--color-primary)] transition-colors text-sm font-medium mb-4">
@@ -561,6 +561,6 @@ export default function EditKaryaPage() {
         )}
       </AnimatePresence>
       </div>
-    </main>
+    </div>
   );
 }

@@ -10,11 +10,13 @@ import {
   FiMapPin,
   FiArrowRight,
   FiClock,
-  FiCheckCircle
+  FiCheckCircle,
+  FiGrid
 } from "react-icons/fi";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { AgendaKegiatan } from "@/types/agenda";
 import { formatDateToIndo } from "@/utils/dateFormatter";
+import AgendaCalendarView from "@/components/agenda/AgendaCalendarView";
 
 const categories = ['Semua', 'Kaderisasi', 'Teknologi', 'Akademik', 'Sosial', 'Internal'];
 
@@ -27,6 +29,8 @@ function AgendaPageContent({ data }: { data: AgendaKegiatan[] }) {
   const setActiveTab = (tab: "event" | "volunteer") => {
     router.replace(`/agenda?tab=${tab}`, { scroll: false });
   };
+
+  const [viewMode, setViewMode] = useState<"grid" | "calendar">("grid");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -176,30 +180,60 @@ function AgendaPageContent({ data }: { data: AgendaKegiatan[] }) {
           </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-3 bg-surface border border-outline-variant/30 rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3 relative">
-          <FiSearch size={17} className={`shrink-0 transition-colors ${isSearching || isSearchingVol ? "text-primary" : "text-on-surface-variant"}`} />
-          {activeTab === "event" ? (
-            <input
-              type="text"
-              placeholder="Cari agenda atau event..."
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-              className="flex-1 bg-transparent text-sm text-on-background placeholder-on-surface-variant/60 focus:outline-none"
-            />
-          ) : (
-            <input
-              type="text"
-              placeholder="Cari posisi volunteer atau rekrutmen..."
-              value={volunteerSearchQuery}
-              onChange={(e) => setVolunteerSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent text-sm text-on-background placeholder-on-surface-variant/60 focus:outline-none"
-            />
-          )}
-          {(isSearching || isSearchingVol) && (
-            <div className="flex items-center gap-2 text-xs font-bold text-primary animate-pulse shrink-0 bg-primary/10 px-2.5 py-1 rounded-full">
-              <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span>Mencari...</span>
+        {/* Search Bar & View Toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-3">
+          <div className="flex-1 bg-surface border border-outline-variant/30 rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3 relative">
+            <FiSearch size={17} className={`shrink-0 transition-colors ${isSearching || isSearchingVol ? "text-primary" : "text-on-surface-variant"}`} />
+            {activeTab === "event" ? (
+              <input
+                type="text"
+                placeholder="Cari agenda atau event..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                className="flex-1 bg-transparent text-sm text-on-background placeholder-on-surface-variant/60 focus:outline-none"
+              />
+            ) : (
+              <input
+                type="text"
+                placeholder="Cari posisi volunteer atau rekrutmen..."
+                value={volunteerSearchQuery}
+                onChange={(e) => setVolunteerSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent text-sm text-on-background placeholder-on-surface-variant/60 focus:outline-none"
+              />
+            )}
+            {(isSearching || isSearchingVol) && (
+              <div className="flex items-center gap-2 text-xs font-bold text-primary animate-pulse shrink-0 bg-primary/10 px-2.5 py-1 rounded-full">
+                <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="hidden sm:inline">Mencari...</span>
+              </div>
+            )}
+          </div>
+          
+          {/* View Mode Toggle (Only for Event tab) */}
+          {activeTab === "event" && (
+            <div className="flex items-center p-1 bg-surface border border-outline-variant/30 rounded-2xl shadow-sm shrink-0">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  viewMode === "grid" 
+                    ? "bg-primary/10 text-primary" 
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <FiGrid size={16} />
+                <span className="hidden sm:inline">Grid</span>
+              </button>
+              <button
+                onClick={() => setViewMode("calendar")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  viewMode === "calendar" 
+                    ? "bg-primary/10 text-primary" 
+                    : "text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <FiCalendar size={16} />
+                <span className="hidden sm:inline">Kalender</span>
+              </button>
             </div>
           )}
         </div>
@@ -208,7 +242,13 @@ function AgendaPageContent({ data }: { data: AgendaKegiatan[] }) {
         {/* Spacer for volunteer tab */}
         {activeTab === "volunteer" && <div className="mb-6" />}
 
-        {activeTab === "event" && (
+        {activeTab === "event" && viewMode === "calendar" && (
+          <div className="mt-8 mb-16">
+            <AgendaCalendarView agendas={agendas} />
+          </div>
+        )}
+
+        {activeTab === "event" && viewMode === "grid" && (
           <>
             {/* Grid Content Agenda */}
             {isSearching ? (

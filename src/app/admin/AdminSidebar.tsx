@@ -3,18 +3,19 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { FiHome, FiFileText, FiBriefcase, FiCalendar, FiChevronLeft, FiChevronRight, FiCheckCircle, FiUsers, FiAward, FiImage, FiMessageSquare } from "react-icons/fi";
+import { FiHome, FiFileText, FiBriefcase, FiCalendar, FiChevronLeft, FiChevronRight, FiCheckCircle, FiUsers, FiAward, FiImage, FiMessageSquare, FiShield } from "react-icons/fi";
 import { createClient } from "@/utils/supabase/client";
 
 const navItems = [
   { name: "Dashboard", href: "/admin", icon: FiHome },
+  { name: "Kelola Mahasiswa", href: "/admin/mahasiswa", icon: FiUsers },
   { name: "Profil Kabinet", href: "/admin/kabinet", icon: FiAward },
   { name: "Kelola Berita", href: "/admin/berita", icon: FiFileText },
   { name: "Kelola Karya", href: "/admin/karya", icon: FiBriefcase },
   { name: "Kelola Kegiatan", href: "/admin/kegiatan", icon: FiCalendar },
   { name: "Kelola Dokumentasi", href: "/admin/dokumentasi", icon: FiImage },
   { name: "Kotak Saran", href: "/admin/saran-aduan", icon: FiMessageSquare },
-  { name: "Manajemen User", href: "/admin/users", icon: FiUsers },
+  { name: "Manajemen Akun Admin", href: "/admin/users", icon: FiShield },
 ];
 
 export default function AdminSidebar() {
@@ -83,55 +84,92 @@ export default function AdminSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 overflow-y-auto space-y-1.5 ${isCollapsed ? "px-3" : "px-4 md:px-6"}`}>
+      <nav className={`flex-1 flex flex-col overflow-y-auto space-y-1.5 pb-6 ${isCollapsed ? "px-3" : "px-4 md:px-6"}`}>
         {!isCollapsed && (
           <p className="px-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider mb-4 mt-2 whitespace-nowrap">Menu Utama</p>
         )}
-        {navItems.map((item) => {
-          let isActive = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href + "/"));
-          
-          if (item.href === "/admin/kegiatan" && fromParam === "dokumentasi") {
-            isActive = false;
-          }
-          if (item.href === "/admin/dokumentasi" && fromParam === "dokumentasi") {
-            isActive = true;
-          }
+        
+        {/* Main Nav Items */}
+        <div className="flex-1 space-y-1.5">
+          {navItems.filter(item => item.name !== "Manajemen Akun Admin").map((item) => {
+            let isActive = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href + "/"));
+            
+            if (item.href === "/admin/kegiatan" && fromParam === "dokumentasi") {
+              isActive = false;
+            }
+            if (item.href === "/admin/dokumentasi" && fromParam === "dokumentasi") {
+              isActive = true;
+            }
 
-          const Icon = item.icon;
+            const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              title={isCollapsed ? item.name : ""}
-              className={`flex items-center rounded-xl transition-all duration-300 font-semibold text-sm group relative overflow-hidden ${
-                isCollapsed ? "justify-center py-3.5 px-0" : "gap-3 px-4 py-3.5"
-              } ${
-                isActive
-                  ? "bg-primary text-white shadow-md shadow-primary/20"
-                  : "text-on-surface-variant hover:bg-surface hover:text-primary hover:shadow-sm"
-              }`}
-            >
-              {isActive && !isCollapsed && (
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
-              )}
-              <Icon size={20} className={`shrink-0 ${isActive ? "text-white" : "text-on-surface-variant/70 group-hover:text-primary"}`} /> 
-              {!isCollapsed && (
-                <span className="relative z-10 whitespace-nowrap overflow-hidden text-ellipsis flex-1 flex justify-between items-center">
-                  {item.name}
-                  {item.name === "Kelola Karya" && pendingKaryaCount > 0 && (
-                    <span className="bg-red-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm">
-                      {pendingKaryaCount}
-                    </span>
-                  )}
-                </span>
-              )}
-              {isCollapsed && item.name === "Kelola Karya" && pendingKaryaCount > 0 && (
-                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#f8fafc]"></span>
-              )}
-            </Link>
-          );
-        })}
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                title={isCollapsed ? item.name : ""}
+                className={`flex items-center rounded-xl transition-all duration-300 font-semibold text-sm group relative overflow-hidden ${
+                  isCollapsed ? "justify-center py-3.5 px-0" : "gap-3 px-4 py-3.5"
+                } ${
+                  isActive
+                    ? "bg-primary text-white shadow-md shadow-primary/20"
+                    : "text-on-surface-variant hover:bg-surface hover:text-primary hover:shadow-sm"
+                }`}
+              >
+                {isActive && !isCollapsed && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
+                )}
+                <Icon size={20} className={`shrink-0 ${isActive ? "text-white" : "text-on-surface-variant/70 group-hover:text-primary"}`} /> 
+                {!isCollapsed && (
+                  <span className="relative z-10 whitespace-nowrap overflow-hidden text-ellipsis flex-1 flex justify-between items-center">
+                    {item.name}
+                    {item.name === "Kelola Karya" && pendingKaryaCount > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm">
+                        {pendingKaryaCount}
+                      </span>
+                    )}
+                  </span>
+                )}
+                {isCollapsed && item.name === "Kelola Karya" && pendingKaryaCount > 0 && (
+                  <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#f8fafc]"></span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Separator & Admin Account Management at the bottom */}
+        <div className="pt-4 mt-4 border-t border-outline-variant/30">
+          {navItems.filter(item => item.name === "Manajemen Akun Admin").map((item) => {
+            const isActive = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href + "/"));
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                title={isCollapsed ? item.name : ""}
+                className={`flex items-center rounded-xl transition-all duration-300 font-semibold text-sm group relative overflow-hidden ${
+                  isCollapsed ? "justify-center py-3.5 px-0" : "gap-3 px-4 py-3.5"
+                } ${
+                  isActive
+                    ? "bg-primary text-white shadow-md shadow-primary/20"
+                    : "text-on-surface-variant hover:bg-surface hover:text-primary hover:shadow-sm"
+                }`}
+              >
+                {isActive && !isCollapsed && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
+                )}
+                <Icon size={20} className={`shrink-0 ${isActive ? "text-white" : "text-on-surface-variant/70 group-hover:text-primary"}`} /> 
+                {!isCollapsed && (
+                  <span className="relative z-10 whitespace-nowrap overflow-hidden text-ellipsis flex-1 flex justify-between items-center">
+                    {item.name}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
     </aside>

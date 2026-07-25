@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { FiHome, FiAward, FiCalendar, FiBookOpen, FiUser, FiLogOut, FiChevronDown } from "react-icons/fi";
+import { FiHome, FiAward, FiCalendar, FiBookOpen, FiUser, FiLogOut, FiChevronDown, FiGrid, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 
@@ -14,6 +14,7 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [hideProfileTooltip, setHideProfileTooltip] = useState(false);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -29,7 +30,8 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        setUserProfile({ ...user, ...profile });
+        const { data: mhsProfile } = await supabase.from('mahasiswa_profiles').select('nim').eq('user_id', user.id).single();
+        setUserProfile({ ...user, ...profile, has_completed_profile: !!mhsProfile?.nim });
       } else {
         setUserProfile(null);
       }
@@ -42,6 +44,7 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
     router.prefetch("/");
     router.prefetch("/agenda");
     router.prefetch("/karya");
+    router.prefetch("/mahasiswa");
     router.prefetch("/berita");
     router.prefetch("/kabinet");
     router.prefetch("/dokumentasi");
@@ -80,8 +83,9 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
 
   const navLinks = [
     { name: "Beranda", path: "/" },
-    { name: "Karya & Inovasi", path: "/karya" },
-    { name: "Event & Rekrutmen", path: "/agenda" },
+    { name: "Karya", path: "/karya" },
+    { name: "Mahasiswa", path: "/mahasiswa" },
+    { name: "Agenda", path: "/agenda" },
     {
       name: "Publikasi",
       dropdown: true,
@@ -109,16 +113,16 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
             : "bg-transparent border-transparent"
           }`}
       >
-        <div className="flex justify-between items-center h-20 md:h-24 px-5 md:px-10 max-w-7xl mx-auto">
-          <Link href="/" className="flex items-center gap-3 md:gap-4 group">
-            <div className="flex items-center gap-2">
+        <div className="flex justify-between items-center h-20 md:h-24 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto gap-4">
+          <Link href="/" className="flex items-center gap-2 md:gap-3 group shrink-0">
+            <div className="flex items-center gap-1.5 md:gap-2">
               <Image
                 alt="BEM STMIK Tazkia Logo 1"
                 src="/images/logo.png"
                 width={64}
                 height={64}
                 priority
-                className="h-12 w-auto md:h-14 object-contain group-hover:scale-105 transition-transform duration-300"
+                className="h-10 w-auto md:h-12 lg:h-14 object-contain group-hover:scale-105 transition-transform duration-300"
               />
               <Image
                 alt="BEM STMIK Tazkia Logo 2"
@@ -126,18 +130,18 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
                 width={64}
                 height={64}
                 priority
-                className="h-12 w-auto md:h-14 object-contain group-hover:scale-105 transition-transform duration-300"
+                className="h-10 w-auto md:h-12 lg:h-14 object-contain group-hover:scale-105 transition-transform duration-300"
               />
             </div>
             <div className="hidden sm:flex flex-row items-center gap-1.5">
               <span
-                className={`font-bold leading-none text-xl transition-colors duration-300 ${isScrolled || !isHome ? "text-primary" : "text-white"
+                className={`font-bold leading-none text-lg md:text-xl transition-colors duration-300 ${isScrolled || !isHome ? "text-primary" : "text-white"
                   }`}
               >
                 BEM STMIK
               </span>
               <span
-                className={`font-bold leading-none text-xl transition-colors duration-300 ${isScrolled || !isHome ? "text-secondary" : "text-white"
+                className={`font-bold leading-none text-lg md:text-xl transition-colors duration-300 ${isScrolled || !isHome ? "text-secondary" : "text-white"
                   }`}
               >
                 Tazkia
@@ -146,7 +150,7 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
           </Link>
 
           {/* Desktop Nav Links */}
-          <div className="hidden lg:flex space-x-8 items-center font-semibold text-sm">
+          <div className="hidden lg:flex lg:gap-4 xl:gap-8 items-center font-semibold text-sm">
             {navLinks.map((link) => {
               if (link.dropdown) {
                 const isActive = link.children?.some(child => pathname === child.path);
@@ -229,6 +233,19 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
                   <FiChevronDown className={`transition-transform ${showProfileMenu ? 'rotate-180' : ''} text-sm md:text-base`} />
                 </button>
 
+                {!hideProfileTooltip && userProfile?.has_completed_profile === false && (
+                  <div className="absolute top-full right-0 mt-4 mr-2 md:mr-0 z-50 animate-bounce cursor-pointer" onClick={() => setHideProfileTooltip(true)}>
+                    <div className="bg-[var(--color-secondary)] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-secondary/30 relative whitespace-nowrap flex items-center gap-2">
+                      <span>✨ Ayo sesuaikan profilmu agar lebih menarik!</span>
+                      <button className="text-white/80 hover:text-white" onClick={(e) => { e.stopPropagation(); setHideProfileTooltip(true); }}>
+                        <FiX size={14} />
+                      </button>
+                      {/* Triangle Pointer */}
+                      <div className="absolute -top-1.5 right-6 w-3 h-3 bg-[var(--color-secondary)] rotate-45 rounded-sm"></div>
+                    </div>
+                  </div>
+                )}
+
                 <AnimatePresence>
                   {showProfileMenu && (
                     <motion.div
@@ -262,9 +279,20 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
                         onClick={() => setShowProfileMenu(false)}
                         className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-primary/10 hover:text-primary transition-colors"
                       >
-                        <FiUser size={16} />
+                        <FiGrid size={16} />
                         Dashboard {userProfile.role === 'admin' ? 'Admin' : 'Karya'}
                       </Link>
+
+                      <Link
+                        href="/dashboard/profile"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-primary/10 hover:text-primary transition-colors"
+                      >
+                        <FiUser size={16} />
+                        Sesuaikan Profilmu
+                      </Link>
+
+                      <div className="h-px bg-outline-variant/20 my-1 mx-4"></div>
 
                       <button
                         onClick={() => setShowLogoutConfirm(true)}
@@ -281,7 +309,7 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
               <Link
                 href="/login"
                 className={`ml-2 md:ml-4 px-5 py-2 md:px-8 md:py-3 rounded-full font-semibold text-sm md:text-base transition-all hover:-translate-y-0.5 shadow-soft ${isScrolled || !isHome
-                    ? "bg-primary text-on-primary hover:bg-primary/90"
+                    ? "bg-secondary text-on-primary hover:bg-secondary/90 shadow-secondary/30"
                     : "bg-surface/15 backdrop-blur-md border border-white/40 text-white hover:bg-secondary hover:border-secondary"
                   }`}
               >
