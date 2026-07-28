@@ -21,14 +21,14 @@ export default function DashboardTopbar({ user }: { user?: any }) {
   useEffect(() => {
     const checkProfile = async () => {
       if (user) {
-        const { data: mhsProfile } = await supabase
-          .from('mahasiswa_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
+        const { data: profileData, error } = await supabase
+        .from('mahasiswa_profiles')
+        .select('full_name, contact_email, angkatan, prodi, avatar_url, bio, skills, github_url, linkedin_url')
+        .eq('user_id', user.id)
+        .single();
         
-        setHasCompletedProfile(!!mhsProfile?.nim);
-        if (mhsProfile) setProfileData(mhsProfile);
+        setHasCompletedProfile(!!profileData?.angkatan);
+        if (profileData) setProfileData(profileData);
       }
     };
     checkProfile();
@@ -45,17 +45,19 @@ export default function DashboardTopbar({ user }: { user?: any }) {
   }, []);
 
   const fullName = user?.user_metadata?.full_name || user?.raw_user_meta_data?.full_name || "Mahasiswa";
-  const avatarUrl = user?.user_metadata?.avatar_url || user?.raw_user_meta_data?.avatar_url || user?.user_metadata?.picture || user?.raw_user_meta_data?.picture;
+  const authAvatarUrl = user?.user_metadata?.avatar_url || user?.raw_user_meta_data?.avatar_url || user?.user_metadata?.picture || user?.raw_user_meta_data?.picture;
+  // Prioritaskan avatar kustom dari database, jika kosong baru pakai avatar dari Google/Github
+  const displayAvatar = profileData?.avatar_url || authAvatarUrl;
   const initial = fullName.charAt(0).toUpperCase();
 
   const dummyProfile = {
     id: user?.id || '1',
     full_name: profileData?.full_name || fullName,
-    nim: profileData?.nim || "Belum diisi",
-    email: profileData?.email || user?.email || "",
-    angkatan: profileData?.angkatan || new Date().getFullYear(),
+    contact_email: profileData?.contact_email || "Belum diisi",
+    email: user?.email || "",
+    angkatan: profileData?.angkatan || "Belum diisi",
     prodi: profileData?.prodi || "Belum diisi",
-    avatar_url: profileData?.avatar_url || avatarUrl,
+    avatar_url: displayAvatar,
     bio: profileData?.bio || "Halo! Saya mahasiswa BEM STMIK Tazkia.",
     skills: profileData?.skills || [],
     status_badge: profileData?.status_badge || "🚀 Open for Collab",
@@ -65,29 +67,82 @@ export default function DashboardTopbar({ user }: { user?: any }) {
     website_url: profileData?.website_url,
   };
 
+  // Gamifikasi Profil (Progress Ring)
+  let profileScore = 0;
+  if (profileData) {
+    if (profileData.contact_email) profileScore += 20;
+    if (profileData.prodi) profileScore += 20;
+    if (profileData.bio && profileData.bio.length > 10) profileScore += 20;
+    if (profileData.skills && profileData.skills.length > 0) profileScore += 20;
+    if (profileData.github_url || profileData.linkedin_url) profileScore += 20;
+  }
+  const completionPercentage = profileData ? profileScore : 0;
+  const radius = 22;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (completionPercentage / 100) * circumference;
+
   return (
-    <header className="w-full bg-surface border-b border-outline-variant/30 shadow-sm px-6 py-4 flex items-center justify-end gap-6 sticky top-0 z-10 transition-colors duration-300">
+    <div className="fixed top-6 right-6 md:top-8 md:right-8 z-50 flex items-center justify-end pointer-events-none">
       
-      {/* Profile Info */}
-      <div className="flex items-center gap-3 relative" ref={dropdownRef}>
-        <div className="text-right hidden sm:block">
-          <p className="text-sm font-bold text-on-surface leading-tight">{fullName}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mt-0.5">Mahasiswa</p>
-        </div>
+      {/* Profile Info Bubble */}
+      <div className="flex items-center gap-5 relative pointer-events-auto bg-white/80 dark:bg-surface/80 backdrop-blur-xl rounded-full shadow-[0_4px_20px_rgba(27,64,134,0.15)] border border-[var(--color-primary)]/30 pl-6 pr-2.5 py-2 transition-all hover:shadow-[0_8px_25px_rgba(27,64,134,0.25)] hover:border-[var(--color-secondary)]/50" ref={dropdownRef}>
         
+        {/* Nama Akun */}
+        <div className="text-right hidden sm:block">
+          <p className="text-sm font-bold text-on-surface leading-tight drop-shadow-sm">{fullName}</p>
+          <div className="flex items-center justify-end gap-2 mt-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Mahasiswa</span>
+            {completionPercentage < 100 && (
+              <span className="text-[9px] font-black bg-secondary/10 text-secondary px-1.5 py-0.5 rounded-full">
+                {completionPercentage}% Lengkap
+              </span>
+            )}
+          </div>
+        </div>
+
         <div onClick={() => setShowCard(!showCard)} className="block relative cursor-pointer select-none">
-          {avatarUrl && !imgError ? (
-            <img 
-              src={avatarUrl} 
-              alt="Avatar" 
-              className={`w-10 h-10 rounded-full border-2 shrink-0 object-cover transition-colors ${showCard ? 'border-primary' : 'border-outline-variant/50 hover:border-primary'}`}
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <div className={`w-10 h-10 rounded-full text-white flex items-center justify-center font-bold border shrink-0 transition-colors ${showCard ? 'bg-primary/90 border-primary' : 'bg-primary border-primary/20 hover:bg-primary/90'}`}>
-              {initial}
-            </div>
-          )}
+          
+          {/* Progress Ring */}
+          <div className="absolute -inset-1.5 pointer-events-none">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 50 50">
+              <circle
+                className="text-outline-variant/30"
+                strokeWidth="3"
+                stroke="currentColor"
+                fill="transparent"
+                r={radius}
+                cx="25"
+                cy="25"
+              />
+              <circle
+                className={`${completionPercentage === 100 ? 'text-green-500' : 'text-[var(--color-primary)]'} transition-all duration-1000 ease-out`}
+                strokeWidth="3"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                stroke="currentColor"
+                fill="transparent"
+                r={radius}
+                cx="25"
+                cy="25"
+              />
+            </svg>
+          </div>
+
+          <div className={`relative w-10 h-10 rounded-full flex items-center justify-center shrink-0 object-cover transition-transform duration-300 ${showCard ? 'scale-90' : 'hover:scale-105'} ${completionPercentage !== 100 && !showCard ? 'animate-[pulse_3s_ease-in-out_infinite]' : ''}`}>
+            {displayAvatar && !imgError ? (
+              <img 
+                src={displayAvatar} 
+                alt="Avatar" 
+                className={`w-full h-full rounded-full object-cover transition-colors border border-outline-variant/30`}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div className={`w-full h-full rounded-full text-white flex items-center justify-center font-bold transition-colors bg-primary`}>
+                {initial}
+              </div>
+            )}
+          </div>
 
           {/* Bubble Chat Tooltip */}
           <AnimatePresence>
@@ -130,12 +185,12 @@ export default function DashboardTopbar({ user }: { user?: any }) {
                       router.push("/mahasiswa");
                     }}
                   />
-                  <div className="absolute top-4 right-4 z-20">
+                  <div className="absolute top-3 right-3 z-20">
                     <button 
                       onClick={(e) => { e.stopPropagation(); router.push("/dashboard/profile"); setShowCard(false); }}
-                      className="bg-white/20 hover:bg-white/40 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/30 transition-all shadow-sm"
+                      className="bg-black/40 hover:bg-black/60 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1.5 rounded-full border border-white/20 transition-all shadow-md flex items-center gap-1.5"
                     >
-                      Edit Profil
+                      <span>Edit Profil</span>
                     </button>
                   </div>
                 </div>
@@ -145,6 +200,6 @@ export default function DashboardTopbar({ user }: { user?: any }) {
         </div>
       </div>
 
-    </header>
+    </div>
   );
 }

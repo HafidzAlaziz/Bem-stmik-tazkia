@@ -12,7 +12,6 @@ const GOOGLE_SCRIPT_CODE = `function doPost(e) {
     var rowData = [
       postData.tanggal, 
       postData.nama, 
-      postData.nim, 
       postData.kategori, 
       postData.deskripsi
     ];
@@ -146,7 +145,7 @@ export default function SaranAduanAdminPage() {
                     </td>
                     <td className="py-4 px-6 align-top">
                       <div className="font-bold text-sm text-on-surface">{item.nama || 'Anonim'}</div>
-                      <div className="text-xs text-on-surface-variant">{item.nim ? `NIM: ${item.nim}` : '-'}</div>
+
                     </td>
                     <td className="py-4 px-6 align-top">
                       <span className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-widest border ${
@@ -205,7 +204,7 @@ export default function SaranAduanAdminPage() {
               <div className="mb-4">
                 <div className="text-xs text-on-surface-variant font-bold uppercase tracking-wider mb-1">Pengirim</div>
                 <div className="font-semibold text-on-surface">{detailItem.nama || 'Anonim'}</div>
-                <div className="text-sm text-on-surface-variant">NIM: {detailItem.nim && detailItem.nim !== 'Tidak disertakan' ? detailItem.nim : '-'}</div>
+
               </div>
               <div className="mb-4">
                 <div className="text-xs text-on-surface-variant font-bold uppercase tracking-wider mb-1">Tanggal Dikirim</div>
@@ -278,7 +277,7 @@ export default function SaranAduanAdminPage() {
                 {showGuide && (
                   <div className="p-4 bg-surface text-sm text-on-surface-variant border-t border-outline-variant/30 space-y-2 leading-relaxed">
                     <p>1. Buat <strong>Google Sheets baru</strong>.</p>
-                    <p>2. Di baris A1 sampai E1 isi judul: <strong>Tanggal, Nama, NIM, Kategori, Deskripsi</strong>.</p>
+                    <p>2. Di baris A1 sampai D1 isi judul: <strong>Tanggal, Nama, Kategori, Deskripsi</strong>.</p>
                     <p>3. Klik menu <strong>Extensions (Ekstensi) &gt; Apps Script</strong>.</p>
                     <p>4. Hapus semua kode bawaan, lalu <strong>Copy-Paste</strong> kode di bawah ini:</p>
                     

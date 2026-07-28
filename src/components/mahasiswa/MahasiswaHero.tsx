@@ -2,8 +2,12 @@
 
 import { motion } from "framer-motion";
 import { FiSearch, FiFilter, FiX } from "react-icons/fi";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import dynamic from "next/dynamic";
 
+const DotLottieReact = dynamic(
+  () => import("@lottiefiles/dotlottie-react").then((mod) => mod.DotLottieReact),
+  { ssr: false }
+);
 interface MahasiswaHeroProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -53,18 +57,18 @@ export default function MahasiswaHero({
           />
         </motion.div>
 
-        {/* Right Character - animation character.lottie */}
+        {/* Right Character - rocket.lottie (flipped) */}
         <motion.div
           initial={{ opacity: 0, x: 80 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ type: "spring", damping: 20, stiffness: 100, delay: 0.3 }}
-          className="hidden xl:block absolute bottom-0 right-0 z-0 pointer-events-none"
+          className="hidden xl:block absolute bottom-12 right-4 z-0 pointer-events-none"
         >
           <DotLottieReact
-            src="/animations/animation character.lottie"
+            src="/animations/rocket.lottie"
             autoplay
             loop
-            style={{ width: 280, height: 280 }}
+            style={{ width: 220, height: 220, transform: "scaleX(-1)" }}
           />
         </motion.div>
 

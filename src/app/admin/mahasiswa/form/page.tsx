@@ -19,7 +19,7 @@ export default function AdminMahasiswaFormPage() {
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
-    angkatan: "2024",
+    angkatan: "2",
     prodi: "Teknik Informatika",
     is_featured: false,
   });
@@ -50,7 +50,7 @@ export default function AdminMahasiswaFormPage() {
           setFormData({
             full_name: data.full_name || "",
             email: data.email || "",
-            angkatan: data.angkatan ? data.angkatan.toString() : "2024",
+            angkatan: data.angkatan ? data.angkatan.toString() : "2",
             prodi: data.prodi || "Teknik Informatika",
             is_featured: data.is_featured || false,
           });
@@ -192,7 +192,7 @@ export default function AdminMahasiswaFormPage() {
                 value={formData.angkatan}
                 onChange={handleChange}
                 className="w-full bg-surface-variant/30 border border-outline-variant/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
-                placeholder="Contoh: 2024"
+                placeholder="Contoh: 1, 2, 3..."
               />
             </div>
             

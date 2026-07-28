@@ -4,6 +4,8 @@ import { createClient } from "@/utils/supabase/server";
 import { FiPlus, FiFileText } from "react-icons/fi";
 import { redirect } from "next/navigation";
 import DashboardKaryaList from "./DashboardKaryaList";
+import DynamicGreeting from "./DynamicGreeting";
+import CarAnimation from "./CarAnimation";
 
 export const revalidate = 0;
 
@@ -22,11 +24,11 @@ export default async function UserDashboardPage() {
     .eq("id", user.id)
     .single();
 
-  // Get user's karya
+  // Get user's karya (owned OR collaborated)
   const { data: karyaList } = await supabase
     .from("karya")
     .select("*")
-    .eq("user_id", user.id)
+    .or(`user_id.eq.${user.id},team.cs.[{"user_id":"${user.id}"}]`)
     .order("created_at", { ascending: false });
 
   return (
@@ -39,8 +41,8 @@ export default async function UserDashboardPage() {
             <h1 className="text-3xl font-extrabold text-[var(--color-primary)] mb-2">
               Dashboard Karya
             </h1>
-            <p className="text-on-surface-variant">
-              Halo, <span className="font-semibold text-on-surface">{profile?.full_name || 'User'}</span>. Kelola dan pantau status karya inovasimu di sini.
+            <p className="text-on-surface-variant flex items-center gap-1">
+              <DynamicGreeting name={profile?.full_name || 'User'} />. Kelola dan pantau status karya inovasimu di sini.
             </p>
           </div>
           <Link 
@@ -51,12 +53,15 @@ export default async function UserDashboardPage() {
           </Link>
         </div>
 
-        <div className="bg-surface rounded-3xl shadow-sm border border-outline-variant/30 p-6 md:p-8">
-          <h2 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
-            <FiFileText className="text-[var(--color-secondary)]" /> Karya Saya
-          </h2>
+        <div className="relative mt-8">
+          <CarAnimation />
+          <div className="bg-surface rounded-3xl shadow-sm border border-outline-variant/30 p-6 md:p-8 relative z-20">
+            <h2 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
+              <FiFileText className="text-[var(--color-secondary)]" /> Karya Saya
+            </h2>
 
-          <DashboardKaryaList initialKaryaList={karyaList || []} />
+            <DashboardKaryaList initialKaryaList={karyaList || []} />
+          </div>
         </div>
       </div>
     </div>

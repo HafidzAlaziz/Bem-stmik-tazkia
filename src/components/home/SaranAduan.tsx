@@ -30,7 +30,6 @@ export default function SaranAduan() {
 
   // Form states
   const [nama, setNama] = useState("");
-  const [nim, setNim] = useState("");
   const [kategori, setKategori] = useState("");
   const [deskripsi, setDeskripsi] = useState("");
 
@@ -86,23 +85,26 @@ export default function SaranAduan() {
       hasError = true;
     }
 
+    if (!isCaptchaSolved) {
+      setErrorMsg("Selesaikan verifikasi keamanan (puzzle) terlebih dahulu.");
+      return;
+    }
+
     if (hasError) {
       setFieldErrors(newFieldErrors);
       setErrorMsg("Mohon lengkapi kolom yang wajib diisi (berwarna merah).");
       return;
     }
 
-    // Handle empty name and nim
-    const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const finalNama = nama && nama.trim() !== "" ? nama : `Anonim-${randomId}`;
-    const finalNim = nim && nim.trim() !== "" ? nim : "Tidak disertakan";
+    // Handle empty name
+    const finalNama = nama && nama.trim() !== "" ? nama : "Anonim";
 
     setIsLoading(true);
 
     try {
       const { error } = await supabase
         .from("saran_aduan")
-        .insert([{ nama: finalNama, nim: finalNim, kategori, deskripsi }]);
+        .insert([{ nama: finalNama, kategori, deskripsi }]);
 
       if (error) {
         throw error;
@@ -124,7 +126,6 @@ export default function SaranAduan() {
               webhookUrl: settingData.value,
               payload: {
                 nama: finalNama,
-                nim: finalNim,
                 kategori,
                 deskripsi,
                 tanggal: new Date().toLocaleString('id-ID', { 
@@ -146,10 +147,14 @@ export default function SaranAduan() {
 
       setSuccessMsg("Terima kasih! Saran/Aduan Anda telah terkirim.");
       setNama("");
-      setNim("");
       setKategori("");
       setDeskripsi("");
       generateCaptcha(); // Reset puzzle untuk pengiriman berikutnya
+
+      // Hilangkan pesan sukses setelah 5 detik
+      setTimeout(() => {
+        setSuccessMsg("");
+      }, 5000);
     } catch (error: any) {
       console.error("Error submitting:", error);
       setErrorMsg("Terjadi kesalahan sistem. Silakan coba lagi.");
@@ -209,21 +214,12 @@ export default function SaranAduan() {
           <div className="bg-surface rounded-2xl md:rounded-3xl p-6 md:p-8 shadow-[0_20px_60px_-15px_rgba(27,64,134,0.08)] border border-outline-variant/30">
             <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5">
                   <div className="flex justify-between items-center">
                     <label className="text-xs md:text-sm font-bold text-on-background">Nama (Opsional)</label>
                     <span className={`text-[10px] ${nama.length >= 50 ? 'text-red-500 font-bold' : 'text-on-surface-variant'}`}>{nama.length}/50</span>
                   </div>
                   <input type="text" name="nama" value={nama} onChange={(e) => setNama(e.target.value)} maxLength={50} placeholder="Anonim" className={`w-full px-3.5 py-2.5 text-sm rounded-xl border bg-surface-variant/20 focus:bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-background ${nama.length >= 50 ? 'border-red-500' : 'border-outline-variant/30'}`} />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs md:text-sm font-bold text-on-background">NIM (Opsional)</label>
-                    <span className={`text-[10px] ${nim.length >= 15 ? 'text-red-500 font-bold' : 'text-on-surface-variant'}`}>{nim.length}/15</span>
-                  </div>
-                  <input type="text" name="nim" value={nim} onChange={(e) => setNim(e.target.value)} maxLength={15} placeholder="12345678" className={`w-full px-3.5 py-2.5 text-sm rounded-xl border bg-surface-variant/20 focus:bg-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-background ${nim.length >= 15 ? 'border-red-500' : 'border-outline-variant/30'}`} />
-                </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
@@ -304,14 +300,13 @@ export default function SaranAduan() {
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading || !kategori || deskripsi.trim() === "" || deskripsi.length > 1000 || !isCaptchaSolved}
-              className="mt-2 flex w-full justify-center rounded-xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-soft transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed items-center gap-2 group cursor-pointer"
+              disabled={isLoading}
+              className="mt-2 flex w-full justify-center rounded-xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-soft transition-all hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed items-center gap-2 group cursor-pointer relative overflow-hidden"
             >
-              {isLoading ? "Mengirim..." : !isCaptchaSolved ? "Selesaikan Puzzle Dahulu" : "Kirim Pesan"}
-              {!isLoading && isCaptchaSolved && <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">send</span>}
+              {isLoading ? "Mengirim..." : "Kirim Pesan"}
+              {!isLoading && <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">send</span>}
             </button>
               
               <p className="text-[10px] md:text-xs text-center text-on-surface-variant">

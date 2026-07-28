@@ -1,521 +1,172 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { createClient } from "@/utils/supabase/client";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FiPlus, FiTrash2, FiSend, FiArrowLeft, FiLoader, FiAlertCircle } from "react-icons/fi";
-import Link from "next/link";
-import { useToast } from "@/components/ui/Toast";
-import ImageUpload from "@/components/ui/ImageUpload";
 import { motion, AnimatePresence } from "framer-motion";
+import { FiMonitor, FiSmartphone, FiBookOpen, FiCpu, FiGrid, FiArrowRight, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
-const KATEGORI_OPTIONS = ["Technology", "UI/UX", "Research", "Programming", "Community Service", "Multimedia"];
+export default function UploadLandingPage() {
+  const KATEGORI_KARYA = [
+    {
+      id: "Technology", // Mapped to existing DB Category
+      title: "Aplikasi Web & Sistem",
+      description: "Website, Sistem Informasi, Dashboard, Landing Page.",
+      icon: <FiMonitor size={24} />,
+      color: "from-blue-500/20 to-blue-600/5",
+      iconColor: "text-blue-500"
+    },
+    {
+      id: "Programming",
+      title: "Aplikasi Mobile",
+      description: "Aplikasi Android, iOS, atau PWA (Progressive Web App).",
+      icon: <FiSmartphone size={24} />,
+      color: "from-green-500/20 to-green-600/5",
+      iconColor: "text-green-500"
+    },
+    {
+      id: "Research",
+      title: "Karya Tulis & Jurnal",
+      description: "Karya Tulis Ilmiah (KTI), Jurnal, Makalah, Penelitian.",
+      icon: <FiBookOpen size={24} />,
+      color: "from-orange-500/20 to-orange-600/5",
+      iconColor: "text-orange-500"
+    },
+    {
+      id: "IoT",
+      title: "Proyek IoT",
+      description: "Internet of Things, Arduino, Raspberry Pi, Robotika.",
+      icon: <FiCpu size={24} />,
+      color: "from-purple-500/20 to-purple-600/5",
+      iconColor: "text-purple-500"
+    },
+      {
+      id: "Multimedia",
+      title: "Desain & Lainnya",
+      description: "UI/UX, Desain Grafis, Video, atau Inovasi umum lainnya.",
+      icon: <FiGrid size={24} />,
+      color: "from-pink-500/20 to-pink-600/5",
+      iconColor: "text-pink-500"
+    }
+  ];
 
-const initialFormState = {
-  title: "",
-  category: "",
-  description: "",
-  image_url: "",
-  tech_stack: "",
-  github_url: "",
-  live_url: "",
-  features: [{ title: "", desc: "" }],
-  team: [{ name: "", role: "", avatar: "" }],
-  gallery: [{ url: "", caption: "" }] as { url: string; caption: string }[],
-};
-
-export default function UploadKaryaPage() {
-  const supabase = createClient();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [invalidField, setInvalidField] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [activeIndex, setActiveIndex] = useState(2); // Start at the middle item
 
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
-  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
-
-  const [formData, setFormData] = useState(initialFormState);
-
-  // Load from LocalStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("karya_upload_draft");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Merge with defaults to handle old drafts missing new fields
-        setFormData(prev => ({
-          ...prev,
-          ...parsed,
-          gallery: Array.isArray(parsed.gallery) ? parsed.gallery : [],
-          features: Array.isArray(parsed.features) && parsed.features.length > 0 ? parsed.features : prev.features,
-          team: Array.isArray(parsed.team) && parsed.team.length > 0 ? parsed.team.map((t: any) => ({
-            name: typeof t === 'string' ? t : (t.name || ''),
-            role: typeof t === 'string' ? '' : (t.role || ''),
-            avatar: typeof t === 'string' ? '' : (t.avatar || ''),
-          })) : prev.team,
-        }));
-      } catch (e) {
-        console.error("Failed to parse saved draft");
-      }
-    }
-  }, []);
-
-  // Save to LocalStorage on change
-  useEffect(() => {
-    localStorage.setItem("karya_upload_draft", JSON.stringify(formData));
-  }, [formData]);
-
-  const isDirty = JSON.stringify(formData) !== JSON.stringify(initialFormState);
-
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty]);
-
-  const handleBackNavigation = (e: React.MouseEvent, url: string) => {
-    if (isDirty) {
-      e.preventDefault();
-      setPendingUrl(url);
-      setShowLeaveConfirm(true);
+  const handleCardClick = (index: number, id: string) => {
+    if (index === activeIndex) {
+      router.push(`/dashboard/upload/form?type=${encodeURIComponent(id)}`);
+    } else {
+      setActiveIndex(index);
     }
   };
 
-  // Listen to auth state changes to kick user out if they log out in another tab or click logout
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        window.location.href = '/login';
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [supabase]);
-
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const nextCard = () => {
+    if (activeIndex < KATEGORI_KARYA.length - 1) setActiveIndex(activeIndex + 1);
   };
 
-  const handleFitur = (index: number, field: "title" | "desc", value: string) => {
-    const updated = [...formData.features];
-    updated[index][field] = value;
-    setFormData(prev => ({ ...prev, features: updated }));
+  const prevCard = () => {
+    if (activeIndex > 0) setActiveIndex(activeIndex - 1);
   };
-
-  const handleTim = (index: number, field: "name" | "role" | "avatar", value: string) => {
-    const updated = [...formData.team];
-    updated[index][field] = value;
-    setFormData(prev => ({ ...prev, team: updated }));
-  };
-
-  const addFitur = () => {
-    setFormData(prev => ({ ...prev, features: [...prev.features, { title: "", desc: "" }] }));
-  }
-
-  const removeFitur = (index: number) => {
-    setFormData(prev => ({ ...prev, features: prev.features.filter((_, i) => i !== index) }));
-  }
-
-  const addAnggota = () => {
-    setFormData(prev => ({ ...prev, team: [...prev.team, { name: "", role: "", avatar: "" }] }));
-  };
-
-  const removeAnggota = (index: number) => {
-    setFormData(prev => ({ ...prev, team: prev.team.filter((_, i) => i !== index) }));
-  };
-
-  const addGallery = () => {
-    setFormData(prev => ({ ...prev, gallery: [...prev.gallery, { url: "", caption: "" }] }));
-  };
-
-  const removeGallery = (index: number) => {
-    setFormData(prev => ({ ...prev, gallery: prev.gallery.filter((_, i) => i !== index) }));
-  };
-
-  const handleGallery = (index: number, field: "url" | "caption", value: string) => {
-    const updated = [...formData.gallery];
-    updated[index][field] = value;
-    setFormData(prev => ({ ...prev, gallery: updated }));
-  };
-
-  const isValidUrl = (urlString: string) => {
-    try {
-      new URL(urlString);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg("");
-    setInvalidField(null);
-
-    const scrollToAndSetInvalid = (id: string, msg: string) => {
-      setInvalidField(id);
-      toast(msg, "error");
-      document.getElementById(id)?.focus();
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" });
-    };
-
-    // Manual Validation
-    if (!formData.image_url) {
-      setInvalidField("section-image");
-      toast("Foto Utama Karya wajib diupload!", "error");
-      document.getElementById("section-image")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-    
-    if (!formData.title.trim()) return scrollToAndSetInvalid("input-title", "Judul Karya wajib diisi!");
-    if (!formData.category) return scrollToAndSetInvalid("input-category", "Kategori wajib dipilih!");
-    if (!formData.description.trim()) return scrollToAndSetInvalid("input-description", "Deskripsi/Abstrak wajib diisi!");
-    if (!formData.tech_stack.trim()) return scrollToAndSetInvalid("input-tech-stack", "Tech Stack wajib diisi!");
-    
-    if (!formData.github_url.trim()) return scrollToAndSetInvalid("input-github-url", "GitHub URL wajib diisi!");
-    else if (!isValidUrl(formData.github_url.trim())) return scrollToAndSetInvalid("input-github-url", "Format GitHub URL tidak valid! Harus berupa link lengkap (misal: https://github.com/...)");
-    
-    if (!formData.live_url.trim()) return scrollToAndSetInvalid("input-live-url", "Live Demo / Link Karya wajib diisi!");
-    else if (!isValidUrl(formData.live_url.trim())) return scrollToAndSetInvalid("input-live-url", "Format Live Demo URL tidak valid! Harus berupa link lengkap (misal: https://...)");
-    
-    const validFeatures = formData.features.filter(f => f.title.trim() !== "" && f.desc.trim() !== "");
-    if (validFeatures.length === 0) return scrollToAndSetInvalid("input-feature-0-title", "Minimal 1 Fitur Utama harus diisi (Judul & Deskripsi)!");
-
-    const validTeam = formData.team.filter(t => t.name.trim() !== "" && t.role.trim() !== "");
-    if (validTeam.length === 0) return scrollToAndSetInvalid("input-team-0-name", "Minimal 1 Anggota Tim harus diisi (Nama & Peran)!");
-
-    const validGallery = formData.gallery.filter(g => g.url.trim() !== "");
-    if (validGallery.length === 0) return scrollToAndSetInvalid("input-gallery-0-url", "Minimal 1 Foto Dokumentasi wajib diupload!");
-
-    setIsLoading(true);
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Anda harus login untuk upload karya.");
-
-      // Clean up tech stack string to array
-      const techStackArray = formData.tech_stack.split(',').map(item => item.trim()).filter(Boolean);
-
-      // Save team as JSONB objects (with name, role, avatar)
-      const teamObjects = formData.team
-        .filter(t => t.name.trim() !== "")
-        .map(t => ({ name: t.name, role: t.role, avatar: t.avatar || "" }));
-
-      const { error } = await supabase.from('karya').insert({
-        user_id: user.id,
-        title: formData.title,
-        slug: formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.random().toString(36).substring(2, 6),
-        category: formData.category,
-        description: formData.description,
-        tech_stack: techStackArray,
-        github_url: formData.github_url || null,
-        live_url: formData.live_url || null,
-        team: teamObjects,
-        features: formData.features.filter(f => f.title.trim() !== ""),
-        gallery: formData.gallery.filter(g => g.url.trim() !== ""),
-        status: 'pending',
-        image_url: formData.image_url,
-      });
-
-      if (error) throw error;
-
-      // Clear draft on success
-      localStorage.removeItem("karya_upload_draft");
-
-      toast("Karya berhasil diajukan! Silakan tunggu review dari BEM.", "success");
-
-      router.push('/dashboard');
-      router.refresh();
-      
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || "Terjadi kesalahan saat upload karya.");
-      setIsLoading(false);
-    }
-  };
-
-  const getInputClass = (id: string) => `w-full px-4 py-3 bg-surface-variant/20 border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all ${
-    invalidField === id 
-      ? "border-red-500 focus:ring-red-500/40 focus:border-red-500 bg-red-50/50" 
-      : "border-outline-variant/30 focus:ring-[var(--color-primary)]/40 focus:border-[var(--color-primary)]"
-  }`;
-  const labelClass = "block text-sm font-semibold text-on-surface mb-1.5";
 
   return (
-    <div className="w-full">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <div className="mb-8">
-          <Link href="/dashboard" onClick={(e) => handleBackNavigation(e, "/dashboard")} className="inline-flex items-center gap-2 text-on-surface-variant hover:text-[var(--color-primary)] transition-colors text-sm font-medium mb-4">
-            <FiArrowLeft /> Kembali ke Dashboard
-          </Link>
-          <h1 className="text-3xl font-extrabold text-[var(--color-primary)] mb-2">
-            Upload Karya Baru
-          </h1>
-          <p className="text-on-surface-variant">
-            Lengkapi formulir di bawah ini untuk mengajukan karyamu agar dapat direview oleh BEM.
-          </p>
-        </div>
-
-        <form noValidate onSubmit={handleSubmit} className="bg-surface p-6 md:p-8 rounded-3xl shadow-sm border border-outline-variant/20 space-y-8">
-          
-          {errorMsg && (
-            <div className="p-4 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-medium">
-              {errorMsg}
-            </div>
-          )}
-
-          {/* Foto Utama */}
-          <div id="section-image">
-            <h3 className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> Foto Utama Karya <span className="text-red-400 normal-case">*</span>
-            </h3>
-            <div className={`mb-2 p-1 rounded-[1.25rem] transition-all ${invalidField === 'section-image' ? 'border-2 border-red-500 bg-red-50/50 shadow-[0_0_0_4px_rgba(239,68,68,0.15)]' : 'border-2 border-transparent'}`}>
-              <ImageUpload
-                value={formData.image_url}
-                onChange={(url) => { setFormData(prev => ({ ...prev, image_url: url })); if(invalidField === 'section-image') setInvalidField(null); }}
-              />
-            </div>
-            <p className="text-xs text-on-surface-variant mt-1 px-1">Format: JPG/PNG, maksimal 2MB. Akan digunakan sebagai cover karya.</p>
-          </div>
-
-          {/* Informasi Utama */}
-          <div>
-            <h3 className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> Informasi Utama
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className={labelClass}>Judul Karya <span className="text-red-400">*</span></label>
-                <input id="input-title" name="title" type="text" value={formData.title} onChange={handleInput} placeholder="Contoh: Smart Campus Navigation System" className={getInputClass("input-title")} />
-              </div>
-              
-              <div>
-                <label className={labelClass}>Kategori <span className="text-red-400">*</span></label>
-                <select id="input-category" name="category" value={formData.category} onChange={handleInput} className={getInputClass("input-category")}>
-                  <option value="" disabled>Pilih Kategori...</option>
-                  {KATEGORI_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className={labelClass}>Deskripsi Singkat / Abstrak <span className="text-red-400">*</span></label>
-                <textarea id="input-description" name="description" rows={4} value={formData.description} onChange={handleInput} placeholder="Jelaskan latar belakang, tujuan, dan hasil dari proyekmu..." className={`${getInputClass("input-description")} resize-none`} />
-              </div>
-            </div>
-          </div>
-
-          {/* Tech & Links */}
-          <div>
-            <h3 className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> Tech Stack & Tautan
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className={labelClass}>Tech Stack <span className="text-red-400">*</span></label>
-                <input id="input-tech-stack" name="tech_stack" type="text" value={formData.tech_stack} onChange={handleInput} placeholder="Contoh: React, Next.js, Python (pisahkan dengan koma)" className={getInputClass("input-tech-stack")} />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className={labelClass}>GitHub Repository <span className="text-red-400">*</span></label>
-                  <input id="input-github-url" name="github_url" type="url" value={formData.github_url} onChange={handleInput} placeholder="https://github.com/..." className={getInputClass("input-github-url")} />
-                </div>
-                <div>
-                  <label className={labelClass}>Live Demo / Link Karya <span className="text-red-400">*</span></label>
-                  <input id="input-live-url" name="live_url" type="url" value={formData.live_url} onChange={handleInput} placeholder="https://..." className={getInputClass("input-live-url")} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Fitur Utama */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider flex items-center gap-2">
-                <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> Fitur Utama <span className="text-red-400 normal-case">*</span>
-              </h3>
-              <button type="button" onClick={addFitur} className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
-                <FiPlus size={14} /> Tambah Fitur
-              </button>
-            </div>
-            <div className="space-y-3">
-              {formData.features.map((fitur, i) => (
-                <div key={i} className="bg-surface-variant/20 rounded-2xl p-4 border border-outline-variant/20">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wide">Fitur {i + 1}</p>
-                    {i > 0 && (
-                      <button type="button" onClick={() => removeFitur(i)} className="text-gray-300 hover:text-red-400 transition-colors">
-                        <FiTrash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-3">
-                    <input id={`input-feature-${i}-title`} type="text" value={fitur.title} onChange={(e) => handleFitur(i, "title", e.target.value)} placeholder={`Nama fitur ${i + 1}...`} className={getInputClass(`input-feature-${i}-title`)} />
-                    <textarea id={`input-feature-${i}-desc`} rows={2} value={fitur.desc} onChange={(e) => handleFitur(i, "desc", e.target.value)} placeholder="Deskripsi singkat fitur ini..." className={`${getInputClass(`input-feature-${i}-desc`)} resize-none`} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Anggota Tim */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider flex items-center gap-2">
-                <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> Anggota Tim <span className="text-red-400 normal-case">*</span>
-              </h3>
-              {formData.team.length < 5 && (
-                <button type="button" onClick={addAnggota} className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
-                  <FiPlus size={14} /> Tambah Anggota
-                </button>
-              )}
-            </div>
-            <div className="space-y-3">
-              {formData.team.map((anggota, i) => (
-                <div key={i} className="bg-surface-variant/20 rounded-2xl p-4 border border-outline-variant/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wide">{i === 0 ? "Project Lead" : `Anggota ${i + 1}`}</p>
-                    {i > 0 && (
-                      <button type="button" onClick={() => removeAnggota(i)} className="text-gray-300 hover:text-red-400 transition-colors">
-                        <FiTrash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 flex flex-col items-center gap-1">
-                      <ImageUpload
-                        value={anggota.avatar || ""}
-                        onChange={(url) => handleTim(i, "avatar", url)}
-                      />
-                      <span className="text-[10px] text-on-surface-variant/60">Foto (opsional)</span>
-                    </div>
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input id={`input-team-${i}-name`} type="text" value={anggota.name} onChange={e => handleTim(i, "name", e.target.value)} placeholder="Nama Lengkap" className={getInputClass(`input-team-${i}-name`)} />
-                      <input id={`input-team-${i}-role`} type="text" value={anggota.role} onChange={e => handleTim(i, "role", e.target.value)} placeholder="Peran (Cth: UI Designer)" className={getInputClass(`input-team-${i}-role`)} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Galeri Dokumentasi */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider flex items-center gap-2">
-                <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> Galeri / Proses Pembuatan <span className="text-red-400 normal-case">*</span>
-              </h3>
-              {formData.gallery.length < 10 && (
-                <button type="button" onClick={addGallery} className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
-                  <FiPlus size={14} /> Tambah Foto
-                </button>
-              )}
-            </div>
-            <p className="text-xs text-on-surface-variant mb-4">Unggah foto-foto tambahan terkait karya ini.</p>
-            <div className="space-y-3">
-              {formData.gallery.map((gal, i) => (
-                <div 
-                  key={i} 
-                  id={`input-gallery-${i}-url`}
-                  className={`rounded-2xl p-4 border flex flex-col sm:flex-row gap-4 items-start transition-all ${
-                    invalidField === `input-gallery-${i}-url` 
-                      ? 'border-red-500 bg-red-50/50 shadow-[0_0_0_4px_rgba(239,68,68,0.15)]' 
-                      : 'border-outline-variant/20 bg-surface-variant/20'
-                  }`}
-                >
-                  <div className="shrink-0">
-                    <ImageUpload
-                      value={gal.url}
-                      onChange={(url) => { handleGallery(i, "url", url); if(invalidField === `input-gallery-${i}-url`) setInvalidField(null); }}
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-col gap-3 justify-center">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wide">Foto {i + 1}</p>
-                      <button type="button" onClick={() => removeGallery(i)} className="text-gray-300 hover:text-red-400 transition-colors">
-                        <FiTrash2 size={14} />
-                      </button>
-                    </div>
-                    <input id={`input-gallery-${i}-caption`} type="text" value={gal.caption} onChange={e => handleGallery(i, "caption", e.target.value)} placeholder="Keterangan foto (misal: Tahap Wireframing)..." className={getInputClass(`input-gallery-${i}-caption`)} />
-                  </div>
-                </div>
-              ))}
-              {formData.gallery.length === 0 && (
-                <div id="section-gallery" className={`text-center py-6 rounded-2xl transition-all ${invalidField === 'section-gallery' ? 'border-2 border-red-500 bg-red-50/50 shadow-[0_0_0_4px_rgba(239,68,68,0.15)]' : 'border-2 border-dashed border-outline-variant/30'}`}>
-                  <p className="text-sm text-on-surface-variant/70 mb-3">Belum ada foto galeri.</p>
-                  <button type="button" onClick={() => { addGallery(); if(invalidField === 'section-gallery') setInvalidField(null); }} className="inline-flex items-center gap-1.5 text-sm font-bold bg-[var(--color-primary)]/10 text-[var(--color-primary)] px-4 py-2 rounded-lg hover:bg-[var(--color-primary)]/20 transition-colors">
-                    <FiPlus size={16} /> Tambah Foto Dokumentasi
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-outline-variant/20">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2.5 py-4 bg-[var(--color-primary)] text-white font-extrabold rounded-2xl hover:bg-[var(--color-primary)]/90 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 text-sm disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
-            >
-              {isLoading ? <FiLoader className="animate-spin" size={18} /> : <FiSend size={18} />}
-              {isLoading ? 'Mengirim Data...' : 'Kirim Pengajuan Karya'}
-            </button>
-          </div>
-
-        </form>
+    <div className="max-w-5xl mx-auto flex flex-col justify-start pt-0 pb-12 md:pb-4 -mt-8 md:-mt-16 relative z-10 overflow-x-clip overflow-y-visible px-4 md:px-0">
+      <div className="text-center mb-8">
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-2xl md:text-3xl font-extrabold text-[var(--color-primary)] mb-2"
+        >
+          Pilih Tipe Karya
+        </motion.h1>
+        <motion.p 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-sm text-on-surface-variant max-w-xl mx-auto"
+        >
+          Apa jenis inovasi yang ingin kamu bagikan hari ini? Geser dan pilih salah satu kategori di bawah.
+        </motion.p>
       </div>
 
-      {/* Leave Confirmation Modal */}
-      <AnimatePresence>
-        {showLeaveConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
-          >
+      <div className="relative h-[340px] md:h-[380px] w-full flex items-center justify-center perspective-1000 mt-2 md:mt-6">
+        
+        {/* Navigation Arrows */}
+        <button 
+          onClick={prevCard}
+          disabled={activeIndex === 0}
+          className="absolute left-2 md:left-8 z-50 p-3 md:p-4 rounded-full bg-surface shadow-xl border border-outline-variant/30 text-on-surface hover:text-[var(--color-primary)] disabled:opacity-0 transition-all hover:scale-110"
+        >
+          <FiChevronLeft size={24} />
+        </button>
+        <button 
+          onClick={nextCard}
+          disabled={activeIndex === KATEGORI_KARYA.length - 1}
+          className="absolute right-2 md:right-8 z-50 p-3 md:p-4 rounded-full bg-surface shadow-xl border border-outline-variant/30 text-on-surface hover:text-[var(--color-primary)] disabled:opacity-0 transition-all hover:scale-110"
+        >
+          <FiChevronRight size={24} />
+        </button>
+
+        {KATEGORI_KARYA.map((item, index) => {
+          const offset = index - activeIndex;
+          const absOffset = Math.abs(offset);
+          const isActive = offset === 0;
+
+          // Responsiveness adjustments
+          // On mobile, x offset is smaller to fit screen
+          const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+          const xOffsetBase = isMobile ? 100 : 200;
+
+          return (
             <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-surface rounded-3xl p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center border border-outline-variant/20"
+              key={item.id}
+              onClick={() => handleCardClick(index, item.id)}
+              initial={false}
+              animate={{
+                x: `${offset * xOffsetBase}px`,
+                scale: 1 - absOffset * 0.15,
+                zIndex: 20 - absOffset,
+                opacity: 1,
+              }}
+              transition={{ type: "spring", stiffness: 350, damping: 30 }}
+              className={`absolute w-[280px] sm:w-[320px] md:w-[340px] h-[320px] bg-surface rounded-3xl p-6 cursor-pointer select-none flex flex-col justify-between
+                ${isActive ? 'border-2 border-[var(--color-primary)] shadow-2xl scale-100' : 'border border-outline-variant/40 shadow-md'}
+              `}
             >
-              <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mb-4">
-                <FiAlertCircle size={28} />
+              <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-100 transition-opacity duration-300 rounded-3xl pointer-events-none`} />
+              
+              <div className="relative z-10 flex flex-col h-full">
+                <div className={`w-14 h-14 rounded-2xl bg-surface-variant/70 flex items-center justify-center ${item.iconColor} mb-2 ${isActive ? 'scale-110 shadow-md' : ''} transition-all duration-300 border border-outline-variant/20`}>
+                  {React.cloneElement(item.icon as React.ReactElement<any>, { size: 26 })}
+                </div>
+                
+                <div className="flex-grow">
+                  <h3 className={`text-xl font-extrabold mb-1.5 transition-colors ${isActive ? 'text-[var(--color-primary)]' : 'text-on-surface'}`}>
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-on-surface-variant leading-relaxed line-clamp-3">
+                    {item.description}
+                  </p>
+                </div>
+                
+                <div className="mt-auto pt-3 border-t border-outline-variant/20">
+                  <button 
+                    className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all
+                      ${isActive ? 'bg-[var(--color-primary)] text-white shadow-lg' : 'bg-surface-variant/50 text-on-surface-variant opacity-0'}
+                    `}
+                  >
+                    Mulai Upload <FiArrowRight size={16} />
+                  </button>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-on-surface mb-2">Perubahan Belum Disimpan</h3>
-              <p className="text-on-surface-variant text-sm mb-8">Apakah kamu yakin ingin keluar? Semua isian pada form ini akan hilang jika belum disimpan.</p>
-              <div className="flex w-full gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowLeaveConfirm(false)}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-on-surface bg-surface-variant hover:bg-outline-variant transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (pendingUrl) router.push(pendingUrl);
-                  }}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30"
-                >
-                  Ya, Keluar
-                </button>
-              </div>
+
+              {/* Click overlay for non-active cards */}
+              {!isActive && (
+                <div className="absolute inset-0 z-20 rounded-3xl bg-surface/10 hover:bg-surface/0 transition-colors" />
+              )}
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          );
+        })}
+      </div>
     </div>
   );
 }

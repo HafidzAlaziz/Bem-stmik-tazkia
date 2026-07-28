@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 
 export interface MahasiswaProfile {
   id: string;
-  nim?: string;
+
   full_name: string;
   email: string;
   contact_email?: string;
@@ -43,7 +43,7 @@ export default function MahasiswaCard({ mahasiswa, onSelect }: MahasiswaCardProp
       className="group cursor-pointer relative bg-surface rounded-3xl border border-outline-variant/30 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
     >
       {/* Animated Card Header Banner */}
-      <div className="relative h-24 w-full bg-primary overflow-hidden p-4">
+      <div className="relative h-32 w-full bg-primary overflow-hidden p-4">
         {/* Subtle drifting grid background for texture */}
         <motion.div
           animate={{ x: [0, -20], y: [0, -20] }}

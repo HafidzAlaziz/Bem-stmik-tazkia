@@ -200,9 +200,9 @@ export default function ProjectDetailPage() {
   const parsedTeam = team.map((member: any) => {
     if (typeof member === 'string') {
       const match = member.match(/^(.+?)\s*\((.+)\)$/);
-      return match ? { name: match[1].trim(), role: match[2].trim(), avatar: '' } : { name: member, role: 'Anggota Tim', avatar: '' };
+      return match ? { name: match[1].trim(), role: match[2].trim(), avatar: '', user_id: '' } : { name: member, role: 'Anggota Tim', avatar: '', user_id: '' };
     }
-    return { name: member.name || 'Anggota', role: member.role || 'Tim', avatar: member.avatar || '' };
+    return { name: member.name || 'Anggota', role: member.role || 'Tim', avatar: member.avatar || '', user_id: member.user_id || '' };
   });
 
   // Handle Features
@@ -316,8 +316,9 @@ export default function ProjectDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
                 {parsedTeam.map((member: any, i: number) => {
                   const initials = (member.name || 'U').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
-                  return (
-                    <div key={i} className="bg-surface-variant/10 p-3 rounded-xl border border-outline-variant/20 flex items-center gap-3">
+                  
+                  const content = (
+                    <div className={`bg-surface-variant/10 p-3 rounded-xl border flex items-center gap-3 transition-colors ${member.user_id ? 'border-primary/30 hover:border-primary/60 hover:bg-primary/5 cursor-pointer' : 'border-outline-variant/20'}`}>
                       <div className="shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary/80 to-secondary/80 text-white flex items-center justify-center font-bold text-sm border border-outline-variant/20 overflow-hidden shadow-sm">
                         {member.avatar ? (
                           <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
@@ -326,10 +327,22 @@ export default function ProjectDetailPage() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-on-surface truncate">{member.name}</p>
+                        <p className={`font-bold text-sm truncate ${member.user_id ? 'text-primary group-hover:text-primary-dark transition-colors' : 'text-on-surface'}`}>{member.name}</p>
                         <p className="text-[10px] text-[var(--color-secondary)] font-bold uppercase tracking-wider mt-0.5 truncate">{member.role}</p>
                       </div>
                     </div>
+                  );
+
+                  return (
+                    <React.Fragment key={i}>
+                      {member.user_id ? (
+                        <Link href={`/mahasiswa?id=${member.user_id}`} className="block group">
+                          {content}
+                        </Link>
+                      ) : (
+                        content
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </div>

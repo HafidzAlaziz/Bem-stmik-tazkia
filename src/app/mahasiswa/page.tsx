@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import MahasiswaHero from "@/components/mahasiswa/MahasiswaHero";
 import MahasiswaCard, { MahasiswaProfile } from "@/components/mahasiswa/MahasiswaCard";
@@ -10,7 +11,7 @@ import { createClient } from "@/utils/supabase/client";
 import Footer from "@/components/layout/Footer";
 import { FiUserX, FiUsers, FiFolder } from "react-icons/fi";
 
-export default function MahasiswaShowcasePage() {
+function MahasiswaShowcaseContent() {
   const [mahasiswaList, setMahasiswaList] = useState<MahasiswaProfile[]>([]);
   const [projectList, setProjectList] = useState<(ProjectData & { mahasiswa_id: string })[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -18,6 +19,8 @@ export default function MahasiswaShowcasePage() {
   const [selectedProdi, setSelectedProdi] = useState("Semua Prodi");
   const [selectedMahasiswa, setSelectedMahasiswa] = useState<MahasiswaProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const idFromUrl = searchParams.get("id");
 
   const supabase = createClient();
 
@@ -57,6 +60,16 @@ export default function MahasiswaShowcasePage() {
     fetchData();
   }, [supabase]);
 
+  // Auto select from URL
+  useEffect(() => {
+    if (idFromUrl && mahasiswaList.length > 0 && !selectedMahasiswa) {
+      const match = mahasiswaList.find(m => m.id === idFromUrl);
+      if (match) {
+        setSelectedMahasiswa(match);
+      }
+    }
+  }, [idFromUrl, mahasiswaList, selectedMahasiswa]);
+
   // Extract available Angkatan dynamically
   const availableAngkatan = useMemo(() => {
     const years = Array.from(new Set(mahasiswaList.map((m) => m.angkatan))).sort((a, b) => b - a);
@@ -78,7 +91,7 @@ export default function MahasiswaShowcasePage() {
       if (searchQuery.trim() !== "") {
         const query = searchQuery.toLowerCase();
         const matchesName = m.full_name.toLowerCase().includes(query);
-        const matchesNIM = m.nim?.toLowerCase().includes(query) || false;
+        const matchesNIM = false;
         const matchesBio = m.bio?.toLowerCase().includes(query) || false;
         const matchesSkills = m.skills?.some((s) => s.toLowerCase().includes(query));
 
@@ -181,10 +194,17 @@ export default function MahasiswaShowcasePage() {
       {/* Student Profile Drawer / Modal Showcase */}
       <MahasiswaProfileDrawer
         mahasiswa={selectedMahasiswa}
-        projects={selectedStudentProjects}
+        projects={selectedMahasiswa ? projectList.filter((p) => p.mahasiswa_id === selectedMahasiswa.id) : []}
         onClose={() => setSelectedMahasiswa(null)}
       />
-
     </div>
+  );
+}
+
+export default function MahasiswaShowcasePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-primary font-bold">Memuat...</div>}>
+      <MahasiswaShowcaseContent />
+    </Suspense>
   );
 }

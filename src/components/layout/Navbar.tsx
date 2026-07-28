@@ -30,8 +30,8 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        const { data: mhsProfile } = await supabase.from('mahasiswa_profiles').select('nim').eq('user_id', user.id).single();
-        setUserProfile({ ...user, ...profile, has_completed_profile: !!mhsProfile?.nim });
+        const { data: mhsProfile } = await supabase.from('mahasiswa_profiles').select('angkatan').eq('user_id', user.id).single();
+        setUserProfile({ ...user, ...profile, has_completed_profile: !!mhsProfile?.angkatan });
       } else {
         setUserProfile(null);
       }
@@ -265,14 +265,16 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
                         <p className="text-xs text-on-surface-variant truncate">{userProfile.email}</p>
                       </div>
 
-                      <Link
-                        href="/"
-                        onClick={() => setShowProfileMenu(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-primary/10 hover:text-primary transition-colors"
-                      >
-                        <FiHome size={16} />
-                        Kembali ke Beranda
-                      </Link>
+                      {!isHome && (
+                        <Link
+                          href="/"
+                          onClick={() => setShowProfileMenu(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-primary/10 hover:text-primary transition-colors"
+                        >
+                          <FiHome size={16} />
+                          Kembali ke Beranda
+                        </Link>
+                      )}
 
                       <Link
                         href={userProfile.role === 'admin' ? '/admin' : '/dashboard'}
@@ -281,15 +283,6 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
                       >
                         <FiGrid size={16} />
                         Dashboard {userProfile.role === 'admin' ? 'Admin' : 'Karya'}
-                      </Link>
-
-                      <Link
-                        href="/dashboard/profile"
-                        onClick={() => setShowProfileMenu(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-on-surface hover:bg-primary/10 hover:text-primary transition-colors"
-                      >
-                        <FiUser size={16} />
-                        Sesuaikan Profilmu
                       </Link>
 
                       <div className="h-px bg-outline-variant/20 my-1 mx-4"></div>

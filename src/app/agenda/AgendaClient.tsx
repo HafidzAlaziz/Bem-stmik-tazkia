@@ -128,6 +128,11 @@ function AgendaPageContent({ data }: { data: AgendaKegiatan[] }) {
     );
   }, [debouncedVolunteerQuery, volunteerOpportunities]);
 
+  const volunteerOpportunitiesWithDate = volunteerOpportunities.map(vol => ({
+    ...vol,
+    date: vol.deadline
+  }));
+
   // Pagination Logic
   const ITEMS_PER_PAGE = 6;
   const totalPages = Math.ceil(filteredAgendas.length / ITEMS_PER_PAGE) || 1;
@@ -208,51 +213,19 @@ function AgendaPageContent({ data }: { data: AgendaKegiatan[] }) {
               </div>
             )}
           </div>
-          
-          {/* View Mode Toggle (Only for Event tab) */}
-          {activeTab === "event" && (
-            <div className="flex items-center p-1 bg-surface border border-outline-variant/30 rounded-2xl shadow-sm shrink-0">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  viewMode === "grid" 
-                    ? "bg-primary/10 text-primary" 
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <FiGrid size={16} />
-                <span className="hidden sm:inline">Grid</span>
-              </button>
-              <button
-                onClick={() => setViewMode("calendar")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  viewMode === "calendar" 
-                    ? "bg-primary/10 text-primary" 
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <FiCalendar size={16} />
-                <span className="hidden sm:inline">Kalender</span>
-              </button>
-            </div>
-          )}
+          {/* View Mode Toggle Removed */}
         </div>
 
 
         {/* Spacer for volunteer tab */}
         {activeTab === "volunteer" && <div className="mb-6" />}
 
-        {activeTab === "event" && viewMode === "calendar" && (
-          <div className="mt-8 mb-16">
-            <AgendaCalendarView agendas={agendas} />
-          </div>
-        )}
-
-        {activeTab === "event" && viewMode === "grid" && (
-          <>
-            {/* Grid Content Agenda */}
+        {activeTab === "event" && (
+          <div className="flex flex-col lg:flex-row gap-8 mt-4 mb-16 items-start">
+            {/* Left Column: Grid */}
+            <div className="w-full lg:w-2/3 flex flex-col gap-6">
             {isSearching ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {[1, 2, 3].map((n) => (
                   <div key={n} className="bg-surface border border-outline-variant/30 rounded-2xl p-5 h-80 flex flex-col justify-between animate-pulse">
                     <div className="w-full h-44 bg-surface-variant/60 rounded-xl" />
@@ -263,7 +236,7 @@ function AgendaPageContent({ data }: { data: AgendaKegiatan[] }) {
                 ))}
               </div>
             ) : filteredAgendas.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {paginatedAgendas.map((agenda, index) => {
                   const eventStatus = getEventStatus(agenda.date);
                   return (
@@ -375,14 +348,23 @@ function AgendaPageContent({ data }: { data: AgendaKegiatan[] }) {
                 </button>
               </div>
             )}
-          </>
+            </div>
+
+            {/* Right Column: Calendar */}
+            <div className="w-full lg:w-1/3 sticky top-24">
+              <AgendaCalendarView agendas={agendas} />
+            </div>
+          </div>
         )}
 
         {/* ========================================================= */}
         {/* TAB VOLUNTEER                                             */}
         {/* ========================================================= */}
         {activeTab === "volunteer" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex flex-col lg:flex-row gap-8 mt-4 mb-16 items-start">
+            {/* Left Column: Grid */}
+            <div className="w-full lg:w-2/3 flex flex-col gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {isSearchingVol ? (
               [1, 2, 3].map((n) => (
                 <div key={n} className="bg-surface border border-outline-variant/30 rounded-2xl p-5 h-80 flex flex-col justify-between animate-pulse">
@@ -393,7 +375,7 @@ function AgendaPageContent({ data }: { data: AgendaKegiatan[] }) {
                 </div>
               ))
             ) : filteredVolunteers.length === 0 ? (
-              <div className="col-span-3 bg-white border border-outline-variant/30 rounded-3xl p-8 sm:p-12 text-center shadow-sm max-w-2xl mx-auto flex flex-col items-center justify-center gap-2 w-full">
+              <div className="col-span-1 md:col-span-2 bg-white border border-outline-variant/30 rounded-3xl p-8 sm:p-12 text-center shadow-sm max-w-2xl mx-auto flex flex-col items-center justify-center gap-2 w-full">
                 <div className="w-36 h-36 sm:w-44 sm:h-44 relative -my-3">
                   <DotLottieReact src="/animations/Calendar.lottie" loop autoplay />
                 </div>
@@ -446,6 +428,13 @@ function AgendaPageContent({ data }: { data: AgendaKegiatan[] }) {
                 </motion.div>
               ))
             )}
+              </div>
+            </div>
+
+            {/* Right Column: Calendar */}
+            <div className="w-full lg:w-1/3 sticky top-24">
+              <AgendaCalendarView agendas={volunteerOpportunitiesWithDate} isVolunteer />
+            </div>
           </div>
         )}
 

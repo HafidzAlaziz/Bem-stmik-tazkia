@@ -61,7 +61,7 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
   const submitDeleteRequest = async () => {
     if (!deletingId || !deleteReason.trim()) return;
     setIsSubmitting(true);
-    
+
     const { error } = await supabase.from('karya').update({
       status: 'deletion_pending',
       deletion_reason: deleteReason,
@@ -94,21 +94,33 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
 
   if (!karyaList || karyaList.length === 0) {
     return (
-      <div className="text-center py-16 bg-surface-variant/20 rounded-2xl border border-dashed border-outline-variant/50">
-        <div className="w-16 h-16 bg-surface-variant/40 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FiFileText size={24} className="text-on-surface-variant/50" />
-        </div>
-        <h3 className="text-lg font-bold text-on-surface mb-2">Belum Ada Karya</h3>
-        <p className="text-on-surface-variant mb-6 max-w-sm mx-auto text-sm">
-          Kamu belum mengunggah karya apapun. Yuk, bagikan inovasimu sekarang juga!
-        </p>
-        <Link 
-          href="/dashboard/upload" 
-          className="inline-flex items-center gap-2 bg-surface border border-outline-variant/50 text-on-surface px-5 py-2.5 rounded-xl font-semibold hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-all"
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center py-16 bg-surface-variant/20 rounded-2xl border border-dashed border-outline-variant/50 relative overflow-hidden"
+      >
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          className="w-20 h-20 bg-[var(--color-primary)]/10 rounded-full flex items-center justify-center mx-auto mb-6 relative"
         >
-          Upload Karya Pertamamu
-        </Link>
-      </div>
+          <div className="absolute inset-0 bg-[var(--color-primary)]/20 rounded-full animate-ping opacity-50" />
+          <FiFileText size={32} className="text-[var(--color-primary)] relative z-10" />
+        </motion.div>
+
+        <h3 className="text-xl font-bold text-on-surface mb-3">Belum Ada Karya</h3>
+        <p className="text-on-surface-variant mb-8 max-w-sm mx-auto text-sm leading-relaxed">
+          Ruang pameranmu masih kosong nih. Yuk, bagikan inovasimu sekarang dan jadilah inspirasi!
+        </p>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Link
+            href="/dashboard/upload"
+            className="inline-flex items-center gap-2 bg-[var(--color-primary)] text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-primary/30 transition-all hover:bg-primary/90"
+          >
+            Upload Karya Pertamamu
+          </Link>
+        </motion.div>
+      </motion.div>
     );
   }
 
@@ -116,8 +128,13 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
     <>
       <div className="space-y-4">
         {karyaList.map((karya) => (
-          <div key={karya.id} className="flex flex-col md:flex-row md:items-start justify-between p-5 rounded-2xl border border-outline-variant/30 hover:border-outline-variant/60 hover:bg-surface-variant/20 transition-all gap-4">
-            
+          <motion.div
+            key={karya.id}
+            whileHover={{ y: -4, scale: 1.005 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="flex flex-col md:flex-row md:items-start justify-between p-5 rounded-2xl border border-outline-variant/30 bg-surface shadow-sm hover:shadow-md hover:border-outline-variant/60 transition-colors gap-4"
+          >
+
             {/* Thumbnail */}
             <div className="shrink-0">
               {karya.image_url ? (
@@ -180,7 +197,7 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
                     </div>
                   )}
                   {karya.edit_reject_reason && (
-                    <button 
+                    <button
                       onClick={() => setRejectModalData({ id: karya.id, title: "Usulan Edit Ditolak", message: karya.edit_reject_reason, type: 'edit' })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-sm border border-red-100 w-fit transition-colors"
                     >
@@ -188,7 +205,7 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
                     </button>
                   )}
                   {karya.deletion_reject_reason && (
-                    <button 
+                    <button
                       onClick={() => setRejectModalData({ id: karya.id, title: "Permintaan Hapus Ditolak", message: karya.deletion_reject_reason, type: 'deletion' })}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-600 font-semibold text-sm border border-orange-100 w-fit transition-colors"
                     >
@@ -203,7 +220,7 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
                     <FiAlertCircle size={16} /> Pengajuan Ditolak
                   </div>
                   {karya.reject_reason && (
-                    <button 
+                    <button
                       onClick={() => setRejectModalData({ id: karya.id, title: "Karya Ditolak", message: karya.reject_reason, type: 'upload' })}
                       className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-sm border border-red-100 w-full transition-colors"
                     >
@@ -224,11 +241,11 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
                   </div>
                 </div>
               )}
-              
+
               <div className="flex gap-2 w-full md:w-auto mt-3 md:mt-0">
                 {karya.status !== 'deletion_pending' && karya.status !== 'deleted' && (
                   <div className="relative flex-1 md:flex-none">
-                    <Link 
+                    <Link
                       href={`/dashboard/edit/${karya.id}`}
                       className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-variant/50 text-on-surface-variant font-semibold text-sm border border-outline-variant/30 hover:bg-[var(--color-primary)] hover:text-white hover:border-[var(--color-primary)] transition-colors"
                     >
@@ -244,9 +261,9 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
                     )}
                   </div>
                 )}
-                
+
                 {karya.status === 'deleted' ? (
-                  <button 
+                  <button
                     onClick={() => hideDeletedKarya(karya.id)}
                     disabled={isSubmitting}
                     className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-variant/50 text-on-surface-variant font-semibold text-sm border border-outline-variant/30 hover:bg-gray-700 hover:text-white hover:border-gray-700 transition-colors w-fit disabled:opacity-50"
@@ -254,7 +271,7 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
                     <FiX size={14} /> Tutup & Hilangkan
                   </button>
                 ) : (
-                  <button 
+                  <button
                     onClick={() => handleDelete(karya)}
                     disabled={karya.status === 'deletion_pending'}
                     className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-variant/50 text-on-surface-variant font-semibold text-sm border border-outline-variant/30 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors w-fit disabled:opacity-50 disabled:cursor-not-allowed"
@@ -264,7 +281,7 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
                 )}
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
@@ -290,7 +307,7 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
               <p className="text-on-surface-variant text-sm mb-6 bg-surface-variant/30 p-3 rounded-xl border border-outline-variant/30 w-full text-left">
                 {rejectModalData.message}
               </p>
-              
+
               <div className="flex gap-3 w-full">
                 {rejectModalData.type === 'edit' && (
                   <>
@@ -354,7 +371,7 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
               <div className="p-6 border-b border-outline-variant/20">
                 <h3 className="text-xl font-bold text-on-surface">Ajukan Penghapusan</h3>
                 <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
-                  Karya yang sudah dipublikasi memerlukan persetujuan BEM untuk dihapus. 
+                  Karya yang sudah dipublikasi memerlukan persetujuan BEM untuk dihapus.
                   Mohon sertakan alasan yang jelas.
                 </p>
               </div>

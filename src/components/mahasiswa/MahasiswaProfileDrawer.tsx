@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FiX, FiGithub, FiLinkedin, FiInstagram, FiGlobe, FiBriefcase, FiMail, FiCheck, FiFolder, FiStar, FiExternalLink, FiSend } from "react-icons/fi";
+import { FiX, FiGithub, FiLinkedin, FiInstagram, FiGlobe, FiBriefcase, FiMail, FiCheck, FiFolder, FiStar, FiExternalLink, FiSend, FiShare2, FiCopy } from "react-icons/fi";
 import Image from "next/image";
 import ProjectCard, { ProjectData } from "./ProjectCard";
 import { MahasiswaProfile } from "./MahasiswaCard";
@@ -19,6 +19,8 @@ export default function MahasiswaProfileDrawer({
   onClose,
 }: MahasiswaProfileDrawerProps) {
   const [activeTab, setActiveTab] = useState<"projects" | "skills">("projects");
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     if (mahasiswa) {
@@ -33,9 +35,18 @@ export default function MahasiswaProfileDrawer({
 
   if (!mahasiswa) return null;
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== "undefined" ? window.location.origin : "");
+  const shareUrl = baseUrl ? `${baseUrl}/mahasiswa?id=${mahasiswa.id}` : "";
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(shareUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex justify-end">
+      <div key="drawer-container" className="fixed inset-0 z-[100] flex justify-end">
         {/* Backdrop overlay */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -150,14 +161,14 @@ export default function MahasiswaProfileDrawer({
 
               {/* Social & Contact Buttons - top right */}
               <div className="flex items-center gap-2 shrink-0">
-                <a
-                  href={`mailto:${mahasiswa.contact_email || mahasiswa.email}`}
+                <button
+                  onClick={() => setShowShareModal(true)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-xs transition-all shadow-sm bg-primary text-white hover:bg-primary/90"
-                  title="Kirim Email"
+                  title="Bagikan Profil"
                 >
-                  <FiMail size={14} />
-                  <span className="hidden sm:inline">Gmail</span>
-                </a>
+                  <FiShare2 size={14} />
+                  <span className="hidden sm:inline">Bagikan Profil</span>
+                </button>
 
                 {mahasiswa.github_url && (
                   <a
@@ -248,6 +259,61 @@ export default function MahasiswaProfileDrawer({
           </div>
         </motion.div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div key="share-modal" className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowShareModal(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="relative bg-surface p-6 rounded-3xl w-full max-w-sm shadow-2xl border border-outline-variant/30 flex flex-col items-center"
+          >
+            <button 
+              onClick={() => setShowShareModal(false)}
+              className="absolute top-4 right-4 p-2 bg-surface-variant text-on-surface-variant hover:text-primary rounded-full transition-colors"
+            >
+              <FiX size={20} />
+            </button>
+            <h3 className="text-xl font-extrabold text-primary mb-2 mt-2 text-center">Bagikan Profil</h3>
+            <p className="text-sm text-on-surface-variant text-center mb-6">
+              Scan QR code atau salin tautan untuk membagikan portofolio ini.
+            </p>
+
+            {/* QR Code from free API */}
+            <div className="bg-white p-3 rounded-2xl shadow-sm border border-outline-variant/20 mb-6">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}&margin=0`} 
+                alt="QR Code"
+                className="w-40 h-40"
+              />
+            </div>
+
+            {/* Copy Link Input */}
+            <div className="w-full flex items-center bg-surface-variant/30 border border-outline-variant/50 rounded-xl overflow-hidden p-1.5 gap-2">
+              <input 
+                type="text"
+                readOnly
+                value={shareUrl}
+                className="flex-1 bg-transparent px-3 py-2 text-xs text-on-surface-variant outline-none"
+              />
+              <button
+                onClick={handleCopyLink}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                  copiedLink ? "bg-secondary text-white" : "bg-primary text-white hover:bg-primary/90"
+                }`}
+              >
+                {copiedLink ? <FiCheck size={14} /> : <FiCopy size={14} />}
+                {copiedLink ? "Tersalin" : "Salin"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }

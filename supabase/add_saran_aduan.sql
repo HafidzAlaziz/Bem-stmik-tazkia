@@ -2,7 +2,6 @@
 CREATE TABLE IF NOT EXISTS public.saran_aduan (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   nama TEXT,
-  nim TEXT,
   kategori TEXT NOT NULL,
   deskripsi TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL

@@ -23,7 +23,7 @@ export default function ProfileSettingsPage() {
     full_name: "",
     contact_email: "",
     prodi: "Teknik Informatika",
-    angkatan: new Date().getFullYear(),
+    angkatan: 2,
     bio: "",
     status_badge: "🚀 Open for Collab",
     github_url: "",
@@ -53,7 +53,7 @@ export default function ProfileSettingsPage() {
       }
       setUserId(user.id);
 
-      const defaultName = user.user_metadata?.full_name || user.raw_user_meta_data?.full_name || "";
+      const defaultName = user.user_metadata?.full_name || "";
 
       // Langkah 1: Cek draft di localStorage DULU, tampilkan segera
       const savedDraft = localStorage.getItem(DRAFT_KEY);
@@ -96,7 +96,7 @@ export default function ProfileSettingsPage() {
           full_name: data.full_name || defaultName,
           contact_email: data.contact_email || "",
           prodi: data.prodi || "Teknik Informatika",
-          angkatan: data.angkatan || new Date().getFullYear(),
+          angkatan: data.angkatan || 2,
           bio: data.bio || "",
           status_badge: data.status_badge || "🚀 Open for Collab",
           github_url: data.github_url || "",
@@ -231,7 +231,7 @@ export default function ProfileSettingsPage() {
       full_name: formData.full_name,
       contact_email: formData.contact_email,
       prodi: formData.prodi,
-      angkatan: parseInt(formData.angkatan.toString()) || new Date().getFullYear(),
+      angkatan: parseInt(formData.angkatan.toString()) || 2,
       bio: formData.bio || "Halo! Saya mahasiswa BEM STMIK Tazkia.",
       status_badge: formData.status_badge,
       github_url: formData.github_url,
@@ -416,18 +416,11 @@ export default function ProfileSettingsPage() {
             </div>
             
             {/* Tahun Angkatan - Read Only */}
-            <div className="space-y-1.5">
-              <label className="text-sm font-bold text-on-surface flex items-center gap-1.5">
-                Tahun Angkatan
-                <span className="text-xs font-normal text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-full">Tidak dapat diubah</span>
+            <div>
+              <label className="block text-sm font-bold text-on-surface mb-2 flex items-center gap-2">
+                Angkatan <span className="text-[10px] bg-surface-variant/50 text-on-surface-variant px-2 py-0.5 rounded-full">Tidak dapat diubah</span>
               </label>
-              <input
-                type="text"
-                value={formData.angkatan}
-                readOnly
-                disabled
-                className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-variant/40 text-on-surface-variant cursor-not-allowed outline-none"
-              />
+              <input type="number" value={formData.angkatan} disabled className="w-full bg-surface-variant/20 border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface-variant cursor-not-allowed" />
             </div>
           </div>
 

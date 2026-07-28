@@ -15,7 +15,7 @@ const navItems = [
   { name: "Kelola Kegiatan", href: "/admin/kegiatan", icon: FiCalendar },
   { name: "Kelola Dokumentasi", href: "/admin/dokumentasi", icon: FiImage },
   { name: "Kotak Saran", href: "/admin/saran-aduan", icon: FiMessageSquare },
-  { name: "Manajemen Akun Admin", href: "/admin/users", icon: FiShield },
+  { name: "Manajemen Akun", href: "/admin/users", icon: FiShield },
 ];
 
 export default function AdminSidebar() {
@@ -32,17 +32,17 @@ export default function AdminSidebar() {
         .from('karya')
         .select('*', { count: 'exact', head: true })
         .or('status.in.(pending,deletion_pending),and(pending_edits.not.is.null,edit_reject_reason.is.null)');
-        
+
       if (!error && count !== null) {
         setPendingKaryaCount(count);
       }
     };
 
     fetchPendingCount();
-    
+
     // Polling as fallback if Supabase Realtime is not enabled on the table
     const intervalId = setInterval(fetchPendingCount, 3000);
-    
+
     // Optional: Set up real-time subscription to auto-update badge
     const channel = supabase.channel('karya_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'karya' }, () => {
@@ -57,13 +57,12 @@ export default function AdminSidebar() {
   }, [supabase]);
 
   return (
-    <aside 
-      className={`transition-all duration-300 ease-in-out bg-gradient-to-b from-[#f8fafc] to-[#f1f5f9] border-r border-outline-variant/30 md:h-screen md:sticky top-0 flex flex-col shadow-sm w-full shrink-0 relative z-20 ${
-        isCollapsed ? "md:w-24" : "md:w-72"
-      }`}
+    <aside
+      className={`transition-all duration-300 ease-in-out bg-gradient-to-b from-[#f8fafc] to-[#f1f5f9] border-r border-outline-variant/30 md:h-screen md:sticky top-0 flex flex-col shadow-sm w-full shrink-0 relative z-20 ${isCollapsed ? "md:w-24" : "md:w-72"
+        }`}
     >
       {/* Toggle Button */}
-      <button 
+      <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className="hidden md:flex absolute -right-4 top-10 w-8 h-8 bg-surface border border-outline-variant/30 shadow-sm rounded-full items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary transition-colors z-30"
       >
@@ -88,12 +87,12 @@ export default function AdminSidebar() {
         {!isCollapsed && (
           <p className="px-4 text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider mb-4 mt-2 whitespace-nowrap">Menu Utama</p>
         )}
-        
+
         {/* Main Nav Items */}
         <div className="flex-1 space-y-1.5">
-          {navItems.filter(item => item.name !== "Manajemen Akun Admin").map((item) => {
+          {navItems.filter(item => item.name !== "Manajemen Akun").map((item) => {
             let isActive = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href + "/"));
-            
+
             if (item.href === "/admin/kegiatan" && fromParam === "dokumentasi") {
               isActive = false;
             }
@@ -108,18 +107,16 @@ export default function AdminSidebar() {
                 key={item.name}
                 href={item.href}
                 title={isCollapsed ? item.name : ""}
-                className={`flex items-center rounded-xl transition-all duration-300 font-semibold text-sm group relative overflow-hidden ${
-                  isCollapsed ? "justify-center py-3.5 px-0" : "gap-3 px-4 py-3.5"
-                } ${
-                  isActive
+                className={`flex items-center rounded-xl transition-all duration-300 font-semibold text-sm group relative overflow-hidden ${isCollapsed ? "justify-center py-3.5 px-0" : "gap-3 px-4 py-3.5"
+                  } ${isActive
                     ? "bg-primary text-white shadow-md shadow-primary/20"
                     : "text-on-surface-variant hover:bg-surface hover:text-primary hover:shadow-sm"
-                }`}
+                  }`}
               >
                 {isActive && !isCollapsed && (
                   <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
                 )}
-                <Icon size={20} className={`shrink-0 ${isActive ? "text-white" : "text-on-surface-variant/70 group-hover:text-primary"}`} /> 
+                <Icon size={20} className={`shrink-0 ${isActive ? "text-white" : "text-on-surface-variant/70 group-hover:text-primary"}`} />
                 {!isCollapsed && (
                   <span className="relative z-10 whitespace-nowrap overflow-hidden text-ellipsis flex-1 flex justify-between items-center">
                     {item.name}
@@ -140,7 +137,7 @@ export default function AdminSidebar() {
 
         {/* Separator & Admin Account Management at the bottom */}
         <div className="pt-4 mt-4 border-t border-outline-variant/30">
-          {navItems.filter(item => item.name === "Manajemen Akun Admin").map((item) => {
+          {navItems.filter(item => item.name === "Manajemen Akun").map((item) => {
             const isActive = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href + "/"));
             const Icon = item.icon;
 
@@ -149,18 +146,16 @@ export default function AdminSidebar() {
                 key={item.name}
                 href={item.href}
                 title={isCollapsed ? item.name : ""}
-                className={`flex items-center rounded-xl transition-all duration-300 font-semibold text-sm group relative overflow-hidden ${
-                  isCollapsed ? "justify-center py-3.5 px-0" : "gap-3 px-4 py-3.5"
-                } ${
-                  isActive
+                className={`flex items-center rounded-xl transition-all duration-300 font-semibold text-sm group relative overflow-hidden ${isCollapsed ? "justify-center py-3.5 px-0" : "gap-3 px-4 py-3.5"
+                  } ${isActive
                     ? "bg-primary text-white shadow-md shadow-primary/20"
                     : "text-on-surface-variant hover:bg-surface hover:text-primary hover:shadow-sm"
-                }`}
+                  }`}
               >
                 {isActive && !isCollapsed && (
                   <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
                 )}
-                <Icon size={20} className={`shrink-0 ${isActive ? "text-white" : "text-on-surface-variant/70 group-hover:text-primary"}`} /> 
+                <Icon size={20} className={`shrink-0 ${isActive ? "text-white" : "text-on-surface-variant/70 group-hover:text-primary"}`} />
                 {!isCollapsed && (
                   <span className="relative z-10 whitespace-nowrap overflow-hidden text-ellipsis flex-1 flex justify-between items-center">
                     {item.name}

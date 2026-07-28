@@ -111,7 +111,6 @@ function VolunteerDetailPageContent() {
 
   const [formData, setFormData] = useState({
     name: "",
-    nim: "",
     email: "",
     whatsapp: "",
     department: "",
@@ -129,7 +128,6 @@ function VolunteerDetailPageContent() {
     // Reset form
     setFormData({
       name: "",
-      nim: "",
       email: "",
       whatsapp: "",
       department: "",
@@ -348,21 +346,6 @@ function VolunteerDetailPageContent() {
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Contoh: Ahmad Fauzi"
-                  required
-                  className="w-full px-3.5 py-2.5 md:px-4 md:py-3 rounded-xl border border-outline-variant/40 bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-                />
-              </div>
-
-              {/* NIM */}
-              <div className="space-y-1.5 md:space-y-2">
-                <label htmlFor="nim" className="text-xs md:text-sm font-bold text-on-background">NIM</label>
-                <input
-                  type="text"
-                  id="nim"
-                  name="nim"
-                  value={formData.nim}
-                  onChange={handleInputChange}
-                  placeholder="Contoh: 221011001"
                   required
                   className="w-full px-3.5 py-2.5 md:px-4 md:py-3 rounded-xl border border-outline-variant/40 bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
                 />
