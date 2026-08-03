@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import MahasiswaHero from "@/components/mahasiswa/MahasiswaHero";
 import MahasiswaCard, { MahasiswaProfile } from "@/components/mahasiswa/MahasiswaCard";
@@ -21,6 +21,8 @@ function MahasiswaShowcaseContent() {
   const [isLoading, setIsLoading] = useState(true);
   const searchParams = useSearchParams();
   const idFromUrl = searchParams.get("id");
+  const router = useRouter();
+  const autoOpenedRef = useRef(false);
 
   const supabase = createClient();
 
@@ -35,21 +37,40 @@ function MahasiswaShowcaseContent() {
           .order("angkatan", { ascending: false });
 
         const { data: projects, error: projErr } = await supabase
-          .from("mahasiswa_projects")
-          .select("*");
+          .from("karya")
+          .select("*")
+          .eq("status", "approved");
+
+        let mappedProjects: any[] = [];
+        if (projects && projects.length > 0) {
+          mappedProjects = projects.map(p => {
+             const mhsId = profiles?.find(prof => prof.user_id === p.user_id)?.id || "";
+             return {
+               id: p.id,
+               title: p.title,
+               description: p.description,
+               tech_stack: p.tech_stack || [],
+               demo_url: p.live_url,
+               github_url: p.github_url,
+               cover_image: p.image_url,
+               likes_count: p.likes || 0,
+               views_count: p.views || 0,
+               category: p.category,
+               mahasiswa_id: mhsId,
+             }
+          });
+        }
 
         if (profiles && profiles.length > 0) {
           // Count projects per mahasiswa
           const formattedProfiles = profiles.map((p) => {
-            const count = projects?.filter((proj) => proj.mahasiswa_id === p.id).length || 0;
+            const count = mappedProjects.filter((proj) => proj.mahasiswa_id === p.id).length || 0;
             return { ...p, projects_count: count };
           });
           setMahasiswaList(formattedProfiles);
         }
 
-        if (projects && projects.length > 0) {
-          setProjectList(projects);
-        }
+        setProjectList(mappedProjects);
       } catch (err) {
         console.error("Error fetching mahasiswa data:", err);
       } finally {
@@ -60,15 +81,16 @@ function MahasiswaShowcaseContent() {
     fetchData();
   }, [supabase]);
 
-  // Auto select from URL
+  // Auto select from URL – gunakan ref agar tidak loop saat close
   useEffect(() => {
-    if (idFromUrl && mahasiswaList.length > 0 && !selectedMahasiswa) {
-      const match = mahasiswaList.find(m => m.id === idFromUrl);
+    if (idFromUrl && mahasiswaList.length > 0 && !autoOpenedRef.current) {
+      const match = mahasiswaList.find(m => m.id === idFromUrl || m.user_id === idFromUrl);
       if (match) {
+        autoOpenedRef.current = true;
         setSelectedMahasiswa(match);
       }
     }
-  }, [idFromUrl, mahasiswaList, selectedMahasiswa]);
+  }, [idFromUrl, mahasiswaList]);
 
   // Extract available Angkatan dynamically
   const availableAngkatan = useMemo(() => {

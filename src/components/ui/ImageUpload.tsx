@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import { FiUpload, FiX, FiImage, FiLoader } from "react-icons/fi";
 import { createClient } from "@/utils/supabase/client";
+import { compressImage } from "@/lib/imageCompression";
 
 interface ImageUploadProps {
   value?: string;
@@ -37,15 +38,18 @@ export default function ImageUpload({ value, onChange, className = "" }: ImageUp
       setIsUploading(true);
       setError(null);
 
+      // Kompres file sebelum upload (max 1MB, 1920px)
+      const compressedFile = await compressImage(file, 1, 1920);
+
       // Create unique filename
-      const fileExt = file.name.split('.').pop();
+      const fileExt = compressedFile.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
       const filePath = `kabinet/${fileName}`;
 
       // Upload to supabase
       const { data, error: uploadError } = await supabase.storage
         .from("public_images")
-        .upload(filePath, file, {
+        .upload(filePath, compressedFile, {
           cacheControl: '3600',
           upsert: false
         });

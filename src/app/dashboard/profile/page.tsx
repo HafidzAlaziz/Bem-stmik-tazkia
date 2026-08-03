@@ -6,6 +6,7 @@ import { FiSave, FiUser, FiInfo, FiLink, FiGithub, FiLinkedin, FiInstagram, FiGl
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/ui/Toast";
+import { compressImage } from "@/lib/imageCompression";
 
 export default function ProfileSettingsPage() {
   const supabase = createClient();
@@ -16,6 +17,9 @@ export default function ProfileSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  // true = prodi & angkatan sudah diset admin (read-only untuk user)
+  // false = belum diinput admin, user bisa isi prodi & angkatan sendiri
+  const [isAdminSeeded, setIsAdminSeeded] = useState(false);
   
   const DRAFT_KEY = "profile_draft";
 
@@ -87,11 +91,14 @@ export default function ProfileSettingsPage() {
           // Ketemu data admin! Langsung klaim (auto-link) profil ini dengan user_id sekarang
           await supabase.from('mahasiswa_profiles').update({ user_id: user.id }).eq('id', emailData.id);
           data = { ...emailData, user_id: user.id };
-          error = null; // Hapus error agar flow berlanjut menggunakan data ini
+          error = null;
+          setIsAdminSeeded(true); // Prodi & angkatan dari admin → read-only
         }
       }
 
       if (data && !error) {
+        // Data ditemukan (dari admin atau login sebelumnya)
+        setIsAdminSeeded(true); // Prodi & angkatan dari admin → read-only
         const dbData = {
           full_name: data.full_name || defaultName,
           contact_email: data.contact_email || "",
@@ -109,14 +116,14 @@ export default function ProfileSettingsPage() {
 
         if (savedDraft) {
           // Ada draft: pakai draft untuk field yang bisa diedit,
-          // tapi SELALU pakai DB untuk field read-only
+          // tapi SELALU pakai DB untuk nama (dari Google) dan prodi & angkatan (dari admin)
           try {
             const draft = JSON.parse(savedDraft);
             setFormData({
               ...draft,
-              full_name: dbData.full_name,
-              prodi: dbData.prodi,
-              angkatan: dbData.angkatan
+              full_name: dbData.full_name, // selalu dari Google/admin
+              prodi: dbData.prodi,         // selalu dari admin
+              angkatan: dbData.angkatan    // selalu dari admin
             });
           } catch {
             setFormData(dbData);
@@ -130,10 +137,30 @@ export default function ProfileSettingsPage() {
           setAvatarPreview(data.avatar_url);
         }
       } else {
-        // Belum punya profil di DB: cek draft dulu
-        if (!savedDraft) {
-          setFormData(prev => ({ ...prev, full_name: defaultName }));
-        }
+        // Belum ada profil sama sekali → auto-insert profil minimal dengan nama Google
+        setIsAdminSeeded(false); // Prodi & angkatan belum dari admin → user bisa isi
+        const minimalProfile = {
+          user_id: user.id,
+          full_name: defaultName,
+          email: user.email || "",
+          prodi: "",
+          angkatan: 1,
+          skills: [],
+        };
+        await supabase
+          .from('mahasiswa_profiles')
+          .insert([minimalProfile]);
+
+        // Set form: nama dari Google (read-only), prodi & angkatan kosong untuk diisi user
+        const draftData = savedDraft ? (() => { try { return JSON.parse(savedDraft); } catch { return {}; } })() : {};
+        setFormData(prev => ({
+          ...prev,
+          prodi: draftData.prodi || "",
+          angkatan: draftData.angkatan || "" as any,
+          ...draftData,
+          // nama selalu dari Google
+          full_name: defaultName,
+        }));
       }
       setLoading(false);
     };
@@ -176,13 +203,16 @@ export default function ProfileSettingsPage() {
 
   const uploadAvatarToSupabase = async (file: File): Promise<string | null> => {
     try {
-      const fileExt = file.name.split('.').pop();
+      // Kompres file sebelum upload (max 1MB, dimensi max 1024px krn hnya avatar)
+      const compressedFile = await compressImage(file, 1, 1024);
+
+      const fileExt = compressedFile.name.split('.').pop();
       const fileName = `${userId}-${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('public_images')
-        .upload(filePath, file);
+        .upload(filePath, compressedFile);
 
       if (uploadError) {
         throw uploadError;
@@ -368,11 +398,11 @@ export default function ProfileSettingsPage() {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Nama Lengkap - Read Only (dari data akademik) */}
+            {/* Nama Lengkap - Selalu read-only, otomatis dari akun Google kampus */}
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-on-surface flex items-center gap-1.5">
                 Nama Lengkap
-                <span className="text-xs font-normal text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-full">Tidak dapat diubah</span>
+                <span className="text-xs font-normal text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-full">Dari akun Google</span>
               </label>
               <input
                 type="text"
@@ -400,27 +430,65 @@ export default function ProfileSettingsPage() {
               <p className="text-xs text-on-surface-variant">Email ini yang akan dihubungi saat orang mengklik tombol kolaborasi di profilmu.</p>
             </div>
             
-            {/* Program Studi - Read Only */}
+            {/* Program Studi - Read Only jika dari admin, pilih sendiri jika belum */}
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-on-surface flex items-center gap-1.5">
                 Program Studi
-                <span className="text-xs font-normal text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-full">Tidak dapat diubah</span>
+                {isAdminSeeded ? (
+                  <span className="text-xs font-normal text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded-full">Tidak dapat diubah</span>
+                ) : (
+                  <span className="text-xs font-normal text-primary bg-primary/10 px-2 py-0.5 rounded-full">Pilih prodimu</span>
+                )}
               </label>
-              <input
-                type="text"
-                value={formData.prodi}
-                readOnly
-                disabled
-                className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-variant/40 text-on-surface-variant cursor-not-allowed outline-none"
-              />
+              {isAdminSeeded ? (
+                <input
+                  type="text"
+                  value={formData.prodi}
+                  readOnly
+                  disabled
+                  className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/30 bg-surface-variant/40 text-on-surface-variant cursor-not-allowed outline-none"
+                />
+              ) : (
+                <select
+                  name="prodi"
+                  value={formData.prodi}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary bg-surface outline-none transition-all"
+                >
+                  <option value="" disabled>-- Pilih Program Studi --</option>
+                  <option value="Teknik Informatika">Teknik Informatika</option>
+                  <option value="Sistem Informasi">Sistem Informasi</option>
+                  <option value="Bisnis Digital">Bisnis Digital</option>
+                </select>
+              )}
             </div>
             
-            {/* Tahun Angkatan - Read Only */}
+            {/* Tahun Angkatan - Read Only jika dari admin, isi sendiri jika belum */}
             <div>
               <label className="block text-sm font-bold text-on-surface mb-2 flex items-center gap-2">
-                Angkatan <span className="text-[10px] bg-surface-variant/50 text-on-surface-variant px-2 py-0.5 rounded-full">Tidak dapat diubah</span>
+                Angkatan
+                {isAdminSeeded ? (
+                  <span className="text-[10px] bg-surface-variant/50 text-on-surface-variant px-2 py-0.5 rounded-full">Tidak dapat diubah</span>
+                ) : (
+                  <span className="text-[10px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">Isi angkatanmu</span>
+                )}
               </label>
-              <input type="number" value={formData.angkatan} disabled className="w-full bg-surface-variant/20 border border-outline-variant/30 rounded-xl px-4 py-3 text-sm text-on-surface-variant cursor-not-allowed" />
+              <input
+                type="number"
+                name="angkatan"
+                value={formData.angkatan}
+                onChange={isAdminSeeded ? undefined : handleChange}
+                disabled={isAdminSeeded}
+                required={!isAdminSeeded}
+                min={1}
+                placeholder={isAdminSeeded ? "" : "Contoh: 1, 2, 3..."}
+                className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all ${
+                  isAdminSeeded
+                    ? "bg-surface-variant/20 border-outline-variant/30 text-on-surface-variant cursor-not-allowed"
+                    : "bg-surface border-outline-variant/50 focus:border-primary focus:ring-1 focus:ring-primary"
+                }`}
+              />
             </div>
           </div>
 

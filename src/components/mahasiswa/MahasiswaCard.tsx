@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/Toast";
 
 export interface MahasiswaProfile {
   id: string;
-
+  user_id?: string;
   full_name: string;
   email: string;
   contact_email?: string;

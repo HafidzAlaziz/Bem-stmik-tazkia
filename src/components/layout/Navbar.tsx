@@ -7,6 +7,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { FiHome, FiAward, FiCalendar, FiBookOpen, FiUser, FiLogOut, FiChevronDown, FiGrid, FiX } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
+import UserNotificationBell from "@/components/layout/UserNotificationBell";
+import AdminNotificationBell from "@/app/admin/AdminNotificationBell";
 
 export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?: boolean }) {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -14,7 +16,7 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
   const [userProfile, setUserProfile] = useState<any>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [hideProfileTooltip, setHideProfileTooltip] = useState(false);
+  const [hideProfileTooltip, setHideProfileTooltip] = useState(true);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -49,6 +51,20 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
     router.prefetch("/kabinet");
     router.prefetch("/dokumentasi");
   }, [router]);
+
+  useEffect(() => {
+    if (userProfile && userProfile.has_completed_profile === false) {
+      const hasSeen = localStorage.getItem("hasSeenProfileTooltip");
+      if (!hasSeen) {
+        setHideProfileTooltip(false);
+        const timer = setTimeout(() => {
+          setHideProfileTooltip(true);
+          localStorage.setItem("hasSeenProfileTooltip", "true");
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [userProfile]);
 
   // Handle click outside for profile dropdown
   useEffect(() => {
@@ -207,6 +223,13 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
 
           {/* Action Button (Mobile, Tablet, Desktop) */}
           <div className="flex items-center ml-auto lg:ml-0 gap-2 md:gap-3">
+            {userProfile && (
+              userProfile.role === 'admin' ? (
+                <AdminNotificationBell isScrolled={isScrolled} isHome={isHome} />
+              ) : (
+                <UserNotificationBell isScrolled={isScrolled} isHome={isHome} />
+              )
+            )}
             {userProfile ? (
               <div className="relative" ref={profileMenuRef}>
                 <button
@@ -234,10 +257,10 @@ export default function Navbar({ isLoggedIn: initialIsLoggedIn }: { isLoggedIn?:
                 </button>
 
                 {!hideProfileTooltip && userProfile?.has_completed_profile === false && (
-                  <div className="absolute top-full right-0 mt-4 mr-2 md:mr-0 z-50 animate-bounce cursor-pointer" onClick={() => setHideProfileTooltip(true)}>
+                  <div className="absolute top-full right-0 mt-4 mr-2 md:mr-0 z-50 animate-bounce cursor-pointer" onClick={() => { setHideProfileTooltip(true); localStorage.setItem("hasSeenProfileTooltip", "true"); }}>
                     <div className="bg-[var(--color-secondary)] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-secondary/30 relative whitespace-nowrap flex items-center gap-2">
-                      <span>✨ Ayo sesuaikan profilmu agar lebih menarik!</span>
-                      <button className="text-white/80 hover:text-white" onClick={(e) => { e.stopPropagation(); setHideProfileTooltip(true); }}>
+                      <span>Tempat profilmu ada di sini, ayo sesuaikan!</span>
+                      <button className="text-white/80 hover:text-white" onClick={(e) => { e.stopPropagation(); setHideProfileTooltip(true); localStorage.setItem("hasSeenProfileTooltip", "true"); }}>
                         <FiX size={14} />
                       </button>
                       {/* Triangle Pointer */}

@@ -165,19 +165,23 @@ export default function AdminMahasiswaFormPage() {
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-bold text-on-surface mb-2">Email Kampus (Syarat Login) *</label>
+            <label htmlFor="email" className="block text-sm font-bold text-on-surface mb-2">
+              Email Kampus {id ? "(Opsional)" : "(Syarat Login *)"}
+            </label>
             <input 
               type="email" 
               id="email"
               name="email"
-              required
+              required={!id}
               value={formData.email}
               onChange={handleChange}
               className="w-full bg-surface-variant/30 border border-outline-variant/50 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
               placeholder="email@stmik-tazkia.ac.id"
             />
             <p className="text-xs text-on-surface-variant/70 mt-2">
-              Email ini akan digunakan oleh mahasiswa untuk "Login with Google". Pastikan tidak ada salah ketik.
+              {id 
+                ? "Boleh dikosongkan jika kamu belum tahu emailnya. Karena akun ini sudah terhubung, mahasiswa tetap bisa melengkapinya sendiri nanti." 
+                : "Wajib diisi jika membuat dari awal. Email ini akan digunakan oleh mahasiswa untuk 'Login with Google'. Pastikan tidak ada salah ketik."}
             </p>
           </div>
 

@@ -1,6 +1,7 @@
 import React from "react";
 import { createClient } from "@/utils/supabase/server";
 import KabinetForm from "./KabinetForm";
+import RealtimeRefresher from "@/components/RealtimeRefresher";
 
 export default async function AdminKabinetPage() {
   const supabase = await createClient();
@@ -21,6 +22,7 @@ export default async function AdminKabinetPage() {
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto">
+      <RealtimeRefresher table="kabinet_profiles" />
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-on-surface">Kelola Profil Kabinet</h1>
         <p className="text-on-surface-variant">Update struktur kepengurusan, visi, misi, dan departemen yang sedang aktif.</p>

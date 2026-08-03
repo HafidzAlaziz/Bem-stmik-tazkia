@@ -65,6 +65,18 @@ export default function BeritaPage() {
       setIsLoading(false);
     }
     fetchNews();
+
+    const supabaseClient = createClient();
+    const channel = supabaseClient
+      .channel('realtime_public_berita')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'berita' }, () => {
+        fetchNews();
+      })
+      .subscribe();
+
+    return () => {
+      supabaseClient.removeChannel(channel);
+    };
   }, []);
 
   // Compute featured, popular, and grid news dynamically

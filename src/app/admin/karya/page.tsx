@@ -5,6 +5,27 @@ import { createClient } from "@/utils/supabase/client";
 import { FiCheck, FiX, FiEye, FiTrash2, FiFileText, FiAlertCircle } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/ui/Toast";
+import { TECH_STACKS } from "@/lib/techStack";
+import { KTI_TOOLS } from "@/lib/ktiTools";
+import { IOT_COMPONENTS } from "@/lib/iotComponents";
+
+const getBadgeDef = (label: string) => {
+  return (
+    TECH_STACKS.find((t) => t.label === label) ||
+    KTI_TOOLS.find((t) => t.label === label) ||
+    IOT_COMPONENTS.find((t) => t.label === label)
+  );
+};
+
+const CATEGORY_MAP: Record<string, string> = {
+  "Technology": "Aplikasi Web & Sistem",
+  "Programming": "Aplikasi Mobile",
+  "Research": "Karya Tulis & Jurnal",
+  "IoT": "Proyek IoT",
+  "Multimedia": "Desain & Lainnya"
+};
+
+const getCategoryLabel = (id: string) => CATEGORY_MAP[id] || id;
 
 export default function KaryaApprovalPage() {
   const supabase = createClient();
@@ -30,7 +51,6 @@ export default function KaryaApprovalPage() {
   const [previewingKarya, setPreviewingKarya] = useState<any | null>(null);
 
   const fetchPersetujuan = async () => {
-    setLoading(true);
     const { data: karyaData, error: karyaError } = await supabase
       .from('karya')
       .select('*')
@@ -40,13 +60,13 @@ export default function KaryaApprovalPage() {
     if (!karyaError && karyaData) {
       // Filter out rejected edits so they disappear from Persetujuan tab
       const validPendingData = karyaData.filter(k => 
-        (k.status === 'pending' && k.pending_edits === null) || 
+        k.status === 'pending' || 
         k.status === 'deletion_pending' || 
         (k.pending_edits !== null && k.edit_reject_reason === null)
       );
 
       // Fix corrupted states in background: if it has pending_edits but status is 'pending' or 'rejected', it should be 'approved'
-      const corruptedItems = karyaData.filter(k => k.pending_edits !== null && k.status !== 'approved');
+      const corruptedItems = karyaData.filter(k => k.pending_edits !== null && k.status !== 'approved' && k.status !== 'pending');
       if (corruptedItems.length > 0) {
         corruptedItems.forEach(async (item) => {
           await supabase.from('karya').update({ status: 'approved' }).eq('id', item.id);
@@ -64,11 +84,9 @@ export default function KaryaApprovalPage() {
     } else {
       setKaryaList([]);
     }
-    setLoading(false);
   };
 
   const fetchDataKarya = async () => {
-    setLoading(true);
     const { data: karyaData, error: karyaError } = await supabase
       .from('karya')
       .select('*')
@@ -87,13 +105,30 @@ export default function KaryaApprovalPage() {
     } else {
       setApprovedList([]);
     }
+  };
+
+  const fetchAllData = async () => {
+    setLoading(true);
+    await Promise.all([fetchPersetujuan(), fetchDataKarya()]);
     setLoading(false);
   };
 
   useEffect(() => {
-    if (activeTab === 'persetujuan') fetchPersetujuan();
-    else fetchDataKarya();
-  }, [activeTab]);
+    fetchAllData();
+
+    // Listen for real-time changes
+    const channel = supabase
+      .channel('realtime_admin_karya')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'karya' }, () => {
+        fetchPersetujuan();
+        fetchDataKarya();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const handleConfirmAction = async () => {
     if (!confirmingId || !confirmingAction) return;
@@ -185,29 +220,28 @@ export default function KaryaApprovalPage() {
           <button
             onClick={() => {
               if (activeTab !== 'persetujuan') {
-                setLoading(true);
                 setActiveTab('persetujuan');
               }
             }}
             className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'persetujuan' ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
           >
             Persetujuan
-            {pendingCount > 0 && (
-              <span className="bg-red-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm">
-                {pendingCount}
-              </span>
-            )}
+            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm ${pendingCount > 0 ? 'bg-red-500 text-white' : 'bg-surface-variant/50 text-on-surface-variant'}`}>
+              {pendingCount}
+            </span>
           </button>
           <button
             onClick={() => {
               if (activeTab !== 'data') {
-                setLoading(true);
                 setActiveTab('data');
               }
             }}
-            className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'data' ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+            className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeTab === 'data' ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
           >
             Data Karya
+            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-sm ${approvedList.length > 0 ? 'bg-[var(--color-primary)] text-white' : 'bg-surface-variant/50 text-on-surface-variant'}`}>
+              {approvedList.length}
+            </span>
           </button>
         </div>
       </div>
@@ -355,7 +389,7 @@ export default function KaryaApprovalPage() {
                             <div className="font-bold text-on-surface line-clamp-1 flex items-center gap-2">
                               {item.title}
                               <span className="bg-surface-variant/50 text-on-surface-variant px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border border-outline-variant/30">
-                                {item.category}
+                                {getCategoryLabel(item.category)}
                               </span>
                               {item.status === 'deletion_pending' && (
                                 <span className="bg-orange-50 text-orange-600 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider border border-orange-100">
@@ -525,7 +559,7 @@ export default function KaryaApprovalPage() {
             <div className="px-6 py-5 border-b border-outline-variant/20 flex justify-between items-center bg-surface sticky top-0 z-10">
               <div>
                 <h3 className="text-xl font-bold text-on-surface">{previewingKarya.title}</h3>
-                <p className="text-sm text-[var(--color-primary)] font-bold uppercase tracking-wider">{previewingKarya.category}</p>
+                <p className="text-sm text-[var(--color-primary)] font-bold uppercase tracking-wider">{getCategoryLabel(previewingKarya.category)}</p>
               </div>
               <button
                 onClick={() => setPreviewingKarya(null)}
@@ -552,11 +586,23 @@ export default function KaryaApprovalPage() {
                 <div>
                   <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Tech Stack</h4>
                   <div className="flex flex-wrap gap-2">
-                    {(Array.isArray(previewingKarya.tech_stack) ? previewingKarya.tech_stack : (previewingKarya.tech_stack || '').split(',')).map((tech: string, i: number) => (
-                      <span key={i} className="px-2.5 py-1 bg-surface-variant/30 text-on-surface-variant rounded-md text-[11px] font-semibold border border-outline-variant/20 whitespace-nowrap">
-                        {tech.trim()}
-                      </span>
-                    ))}
+                    {(Array.isArray(previewingKarya.tech_stack) ? previewingKarya.tech_stack : (previewingKarya.tech_stack || '').split(',')).map((tech: string, i: number) => {
+                      const label = tech.trim();
+                      const def = getBadgeDef(label);
+                      if (def) {
+                        const Icon = def.icon;
+                        return (
+                          <span key={i} className="flex items-center gap-1.5 px-2.5 py-1 border text-[11px] font-semibold rounded-md whitespace-nowrap" style={{ backgroundColor: `${def.color}10`, color: def.color, borderColor: `${def.color}30` }}>
+                            <Icon size={12} /> {def.label}
+                          </span>
+                        );
+                      }
+                      return (
+                        <span key={i} className="px-2.5 py-1 bg-surface-variant/30 text-on-surface-variant rounded-md text-[11px] font-semibold border border-outline-variant/20 whitespace-nowrap">
+                          {label}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

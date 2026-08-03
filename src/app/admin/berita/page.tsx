@@ -5,6 +5,7 @@ import { FiPlus, FiEdit2, FiTrash2, FiEye, FiEyeOff } from "react-icons/fi";
 import { revalidatePath } from "next/cache";
 import Image from "next/image";
 import DeleteBeritaButton from "./DeleteBeritaButton";
+import RealtimeRefresher from "@/components/RealtimeRefresher";
 
 export const revalidate = 0;
 
@@ -42,6 +43,7 @@ export default async function AdminBeritaPage() {
 
   return (
     <div className="space-y-6">
+      <RealtimeRefresher table="berita" />
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-on-surface">Kelola Berita</h1>

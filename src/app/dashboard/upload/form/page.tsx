@@ -10,6 +10,10 @@ import ImageUpload from "@/components/ui/ImageUpload";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import TeamMemberAutocomplete from "@/components/upload/TeamMemberAutocomplete";
+import TechStackSelect from "@/components/upload/TechStackSelect";
+import KTIToolsSelect from "@/components/upload/KTIToolsSelect";
+import IoTComponentSelect from "@/components/upload/IoTComponentSelect";
+import MultimediaToolsSelect from "@/components/upload/MultimediaToolsSelect";
 
 const KATEGORI_OPTIONS = [
   { id: "Technology", label: "Aplikasi Web & Sistem" },
@@ -17,7 +21,6 @@ const KATEGORI_OPTIONS = [
   { id: "Research", label: "Karya Tulis & Jurnal" },
   { id: "IoT", label: "Proyek IoT" },
   { id: "Multimedia", label: "Desain & Lainnya" },
-  { id: "Community Service", label: "Pengabdian Masyarakat" }
 ];
 
 const initialFormState = {
@@ -115,11 +118,13 @@ export default function UploadKaryaPage() {
   // Dynamic labels based on type
   let isKTI = typeParam === "Research";
   let isLainnya = typeParam === "Multimedia";
-  let techStackLabel = isKTI ? "Metodologi / Tools Penelitian *" : (typeParam === "IoT" ? "Komponen Hardware / Software *" : (isLainnya ? "Tools / Aplikasi yang Digunakan *" : "Tech Stack / Tools yang Digunakan *"));
+  let techStackLabel = isKTI ? "Metodologi / Tools Penelitian" : (typeParam === "IoT" ? "Komponen Hardware / Software" : (isLainnya ? "Tools / Aplikasi yang Digunakan" : "Tech Stack / Tools yang Digunakan"));
   let techStackPlaceholder = isKTI ? "Contoh: SPSS, Studi Literatur, Kuantitatif..." : (typeParam === "IoT" ? "Contoh: ESP32, Arduino, Sensor Suhu, MQTT..." : (isLainnya ? "Contoh: Premiere Pro, Photoshop, Canva..." : "Contoh: React, Node.js, Figma..."));
-  let liveUrlLabel = isKTI ? "Link Jurnal / Makalah (Google Drive) *" : (typeParam === "Programming" ? "Link Download / Play Store *" : (typeParam === "IoT" ? "Link Video Demo / Simulasi Wokwi *" : (isLainnya ? "Link Hasil Karya (YouTube / Google Drive) *" : "Live Demo / Website URL *")));
-  let featuresLabel = isKTI ? "Temuan Utama / Poin Penting Penelitian *" : "Fitur Utama Karya *";
-  let featuresDesc = isKTI ? "Jelaskan poin-poin penting atau temuan dari hasil penelitianmu." : "Jelaskan fitur-fitur penting yang ada di dalam karyamu agar orang lain mengerti fungsinya.";
+  let liveUrlLabel = isKTI ? "Link Jurnal / Makalah (Google Drive)" : (typeParam === "Programming" ? "Link Live Demo / App / Play Store" : (typeParam === "IoT" ? "Link Video Demo / Simulasi Wokwi" : (isLainnya ? "Link Hasil Karya (YouTube / Google Drive)" : "Live Demo / Website URL")));
+  let featuresLabel = isKTI ? "Temuan Utama / Poin Penting Penelitian" : (isLainnya ? "Detail / Konsep Karya" : (typeParam === "IoT" ? "Fitur / Fungsi Utama Alat" : "Fitur Utama Karya"));
+  let featuresDesc = isKTI ? "Jelaskan poin-poin penting atau temuan dari hasil penelitianmu." : (isLainnya ? "Jelaskan detail, elemen, atau konsep penting dari karyamu." : (typeParam === "IoT" ? "Jelaskan fungsi dan cara kerja alat yang dibuat." : "Jelaskan fitur-fitur penting yang ada di dalam karyamu agar orang lain mengerti fungsinya."));
+  
+  let techSectionTitle = isKTI ? "Metodologi & Referensi" : (typeParam === "IoT" ? "Komponen & Tautan" : (isLainnya ? "Tools & Tautan" : "Tech Stack & Tautan"));
   
   let showGithub = !isKTI && !isLainnya;
 
@@ -140,14 +145,14 @@ export default function UploadKaryaPage() {
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
+      if (isDirty && !isLoading) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty]);
+  }, [isDirty, isLoading]);
 
   const handleBackNavigation = (e: React.MouseEvent, url: string) => {
     if (isDirty) {
@@ -261,10 +266,8 @@ export default function UploadKaryaPage() {
     if (!formData.live_url.trim()) return scrollToAndSetInvalid("input-live-url", "Link Utama Karya wajib diisi!");
     else if (!isValidUrl(formData.live_url.trim())) return scrollToAndSetInvalid("input-live-url", "Format Link Utama URL tidak valid!");
     
-    if (!isLainnya) {
-      const validFeatures = formData.features.filter(f => f.title.trim() !== "" && f.desc.trim() !== "");
-      if (validFeatures.length === 0) return scrollToAndSetInvalid("input-feature-0-title", `Minimal 1 ${isKTI ? "Temuan Utama" : "Fitur Utama"} harus diisi (Judul & Deskripsi)!`);
-    }
+    const validFeatures = formData.features.filter(f => f.title.trim() !== "" && f.desc.trim() !== "");
+    if (validFeatures.length === 0) return scrollToAndSetInvalid("input-feature-0-title", `Minimal 1 ${isKTI ? "Temuan Utama" : (isLainnya ? "Detail/Konsep" : "Fitur Utama")} harus diisi (Judul & Deskripsi)!`);
 
     const validTeam = formData.team.filter(t => t.name.trim() !== "" && t.role.trim() !== "");
     if (validTeam.length === 0) return scrollToAndSetInvalid("input-team-0-name", "Minimal 1 Anggota Tim harus diisi (Nama & Peran)!");
@@ -306,8 +309,7 @@ export default function UploadKaryaPage() {
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'] });
 
       setTimeout(() => {
-        router.push('/dashboard');
-        router.refresh();
+        window.location.href = '/dashboard';
       }, 2000);
       
     } catch (err: any) {
@@ -385,16 +387,52 @@ export default function UploadKaryaPage() {
 
           <div id="section-tech">
             <h3 className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> Tech Stack & Tautan
+              <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> {techSectionTitle}
             </h3>
             <div className="space-y-4">
               <div>
-                <label htmlFor="input-tech-stack" className={labelClass}>{techStackLabel}</label>
-                <input id="input-tech-stack" type="text" value={formData.tech_stack} onChange={(e) => setFormData(prev => ({ ...prev, tech_stack: e.target.value }))} placeholder={techStackPlaceholder} className={getInputClass("input-tech-stack")} />
+                <label htmlFor="input-tech-stack" className={labelClass}>{techStackLabel} <span className="text-red-400">*</span></label>
+                {isKTI ? (
+                  <KTIToolsSelect
+                    value={formData.tech_stack}
+                    onChange={(val) => {
+                      setFormData(prev => ({ ...prev, tech_stack: val }));
+                      if (invalidField === "input-tech-stack") setInvalidField(null);
+                    }}
+                    error={invalidField === "input-tech-stack"}
+                  />
+                ) : typeParam === "IoT" ? (
+                  <IoTComponentSelect
+                    value={formData.tech_stack}
+                    onChange={(val) => {
+                      setFormData(prev => ({ ...prev, tech_stack: val }));
+                      if (invalidField === "input-tech-stack") setInvalidField(null);
+                    }}
+                    error={invalidField === "input-tech-stack"}
+                  />
+                ) : isLainnya ? (
+                  <MultimediaToolsSelect
+                    value={formData.tech_stack}
+                    onChange={(val) => {
+                      setFormData(prev => ({ ...prev, tech_stack: val }));
+                      if (invalidField === "input-tech-stack") setInvalidField(null);
+                    }}
+                    error={invalidField === "input-tech-stack"}
+                  />
+                ) : (
+                  <TechStackSelect 
+                    value={formData.tech_stack} 
+                    onChange={(val) => {
+                      setFormData(prev => ({ ...prev, tech_stack: val }));
+                      if (invalidField === "input-tech-stack") setInvalidField(null);
+                    }}
+                    error={invalidField === "input-tech-stack"}
+                  />
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="input-live-url" className={labelClass}>{liveUrlLabel}</label>
+                  <label htmlFor="input-live-url" className={labelClass}>{liveUrlLabel} <span className="text-red-400">*</span></label>
                   <input id="input-live-url" type="url" value={formData.live_url} onChange={(e) => setFormData(prev => ({ ...prev, live_url: e.target.value }))} placeholder="https://..." className={getInputClass("input-live-url")} />
                 </div>
                 {showGithub && (
@@ -407,33 +445,31 @@ export default function UploadKaryaPage() {
             </div>
           </div>
 
-          {!isLainnya && (
-            <div id="section-features">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> {featuresLabel}
-                </h3>
-                <button type="button" onClick={addFitur} className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
-                  <FiPlus size={14} /> Tambah {isKTI ? "Poin" : "Fitur"}
-                </button>
-              </div>
-              <p className="text-xs text-on-surface-variant mb-4">{featuresDesc}</p>
-              <div className="space-y-3">
-                {formData.features.map((fitur, i) => (
-                  <div key={i} className="bg-surface-variant/20 rounded-2xl p-4 border border-outline-variant/20">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wide">{isKTI ? "Poin" : "Fitur"} {i + 1}</p>
-                      {i > 0 && <button type="button" onClick={() => removeFitur(i)} className="text-gray-300 hover:text-red-400 transition-colors"><FiTrash2 size={14} /></button>}
-                    </div>
-                    <div className="flex-1 space-y-3">
-                      <input type="text" value={fitur.title} onChange={(e) => handleFitur(i, "title", e.target.value)} placeholder={`Judul ${isKTI ? "poin" : "fitur"}...`} className={getInputClass(`input-feature-${i}-title`)} id={`input-feature-${i}-title`} />
-                      <textarea rows={2} value={fitur.desc} onChange={(e) => handleFitur(i, "desc", e.target.value)} placeholder="Deskripsi..." className={`${getInputClass("")} resize-none`} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div id="section-features">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider flex items-center gap-2">
+                <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> {featuresLabel} <span className="text-red-400 normal-case">*</span>
+              </h3>
+              <button type="button" onClick={addFitur} className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
+                <FiPlus size={14} /> Tambah {isKTI ? "Poin" : (isLainnya ? "Detail" : "Fitur")}
+              </button>
             </div>
-          )}
+            <p className="text-xs text-on-surface-variant mb-4">{featuresDesc}</p>
+            <div className="space-y-3">
+              {formData.features.map((fitur, i) => (
+                <div key={i} className="bg-surface-variant/20 rounded-2xl p-4 border border-outline-variant/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wide">{isKTI ? "Poin" : (isLainnya ? "Detail" : "Fitur")} {i + 1}</p>
+                    {i > 0 && <button type="button" onClick={() => removeFitur(i)} className="text-gray-300 hover:text-red-400 transition-colors"><FiTrash2 size={14} /></button>}
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <input type="text" value={fitur.title} onChange={(e) => handleFitur(i, "title", e.target.value)} placeholder={`Judul ${isKTI ? "poin" : (isLainnya ? "detail" : "fitur")}...`} className={getInputClass(`input-feature-${i}-title`)} id={`input-feature-${i}-title`} />
+                    <textarea rows={2} value={fitur.desc} onChange={(e) => handleFitur(i, "desc", e.target.value)} placeholder="Deskripsi..." className={`${getInputClass("")} resize-none`} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div>
             <div className="flex items-center justify-between mb-4">

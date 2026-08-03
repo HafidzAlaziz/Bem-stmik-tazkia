@@ -15,7 +15,6 @@ const navItems = [
   { name: "Kelola Kegiatan", href: "/admin/kegiatan", icon: FiCalendar },
   { name: "Kelola Dokumentasi", href: "/admin/dokumentasi", icon: FiImage },
   { name: "Kotak Saran", href: "/admin/saran-aduan", icon: FiMessageSquare },
-  { name: "Manajemen Akun", href: "/admin/users", icon: FiShield },
 ];
 
 export default function AdminSidebar() {
@@ -28,20 +27,24 @@ export default function AdminSidebar() {
 
   useEffect(() => {
     const fetchPendingCount = async () => {
-      const { count, error } = await supabase
-        .from('karya')
-        .select('*', { count: 'exact', head: true })
-        .or('status.in.(pending,deletion_pending),and(pending_edits.not.is.null,edit_reject_reason.is.null)');
+      try {
+        const { count, error } = await supabase
+          .from('karya')
+          .select('*', { count: 'exact', head: true })
+          .or('status.in.(pending,deletion_pending),and(pending_edits.not.is.null,edit_reject_reason.is.null)');
 
-      if (!error && count !== null) {
-        setPendingKaryaCount(count);
+        if (!error && count !== null) {
+          setPendingKaryaCount(count);
+        }
+      } catch (err) {
+        // Ignore network errors during polling/fetching
       }
     };
 
     fetchPendingCount();
 
-    // Polling as fallback if Supabase Realtime is not enabled on the table
-    const intervalId = setInterval(fetchPendingCount, 3000);
+    // Polling removed in favor of Supabase Realtime below
+    // (A 3-second polling interval causes aggressive token refreshes and network errors)
 
     // Optional: Set up real-time subscription to auto-update badge
     const channel = supabase.channel('karya_changes')
@@ -51,7 +54,6 @@ export default function AdminSidebar() {
       .subscribe();
 
     return () => {
-      clearInterval(intervalId);
       supabase.removeChannel(channel);
     };
   }, [supabase]);
@@ -90,7 +92,7 @@ export default function AdminSidebar() {
 
         {/* Main Nav Items */}
         <div className="flex-1 space-y-1.5">
-          {navItems.filter(item => item.name !== "Manajemen Akun").map((item) => {
+          {navItems.map((item) => {
             let isActive = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href + "/"));
 
             if (item.href === "/admin/kegiatan" && fromParam === "dokumentasi") {
@@ -129,37 +131,6 @@ export default function AdminSidebar() {
                 )}
                 {isCollapsed && item.name === "Kelola Karya" && pendingKaryaCount > 0 && (
                   <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#f8fafc]"></span>
-                )}
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Separator & Admin Account Management at the bottom */}
-        <div className="pt-4 mt-4 border-t border-outline-variant/30">
-          {navItems.filter(item => item.name === "Manajemen Akun").map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/admin" && pathname?.startsWith(item.href + "/"));
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                title={isCollapsed ? item.name : ""}
-                className={`flex items-center rounded-xl transition-all duration-300 font-semibold text-sm group relative overflow-hidden ${isCollapsed ? "justify-center py-3.5 px-0" : "gap-3 px-4 py-3.5"
-                  } ${isActive
-                    ? "bg-primary text-white shadow-md shadow-primary/20"
-                    : "text-on-surface-variant hover:bg-surface hover:text-primary hover:shadow-sm"
-                  }`}
-              >
-                {isActive && !isCollapsed && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
-                )}
-                <Icon size={20} className={`shrink-0 ${isActive ? "text-white" : "text-on-surface-variant/70 group-hover:text-primary"}`} />
-                {!isCollapsed && (
-                  <span className="relative z-10 whitespace-nowrap overflow-hidden text-ellipsis flex-1 flex justify-between items-center">
-                    {item.name}
-                  </span>
                 )}
               </Link>
             );

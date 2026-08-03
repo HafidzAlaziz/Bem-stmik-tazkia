@@ -2,10 +2,21 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { FiAlertCircle, FiCheckCircle, FiClock, FiFileText, FiEdit2, FiTrash2, FiX, FiUsers, FiHeart } from "react-icons/fi";
+import { FiAlertCircle, FiCheckCircle, FiClock, FiFileText, FiEdit2, FiTrash2, FiX, FiUsers, FiHeart, FiEye } from "react-icons/fi";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { useEffect } from "react";
+
+const CATEGORY_MAP: Record<string, string> = {
+  "Technology": "Aplikasi Web & Sistem",
+  "Programming": "Aplikasi Mobile",
+  "Research": "Karya Tulis & Jurnal",
+  "IoT": "Proyek IoT",
+  "Multimedia": "Desain & Lainnya"
+};
+
+const getCategoryLabel = (id: string) => CATEGORY_MAP[id] || id;
 
 export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaList: any[] }) {
   const supabase = createClient();
@@ -22,6 +33,38 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
   } | null>(null);
 
   const [confirmDeleteData, setConfirmDeleteData] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 6;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, activeCategory]);
+
+  // Real-time listener
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime_karya_dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'karya' }, (payload) => {
+        console.log("Realtime Update Received:", payload);
+        // Memaksa Next.js mengambil ulang data dari server secara otomatis
+        router.refresh();
+        // Karena karyaList menggunakan initialKaryaList sebagai state, 
+        // kita juga butuh efek untuk mengupdate karyaList kalau initialKaryaList berubah.
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, router]);
+
+  // Sync state with server-side props if router.refresh() updates them
+  useEffect(() => {
+    setKaryaList(initialKaryaList);
+  }, [initialKaryaList]);
 
   const handleDelete = async (karya: any) => {
     if (karya.status === "pending" || karya.status === "rejected") {
@@ -124,166 +167,316 @@ export default function DashboardKaryaList({ initialKaryaList }: { initialKaryaL
     );
   }
 
+  const filteredList = karyaList.filter(karya => {
+    // Status filter
+    if (activeTab === "pending" && karya.status !== "pending" && karya.status !== "deletion_pending") return false;
+    if (activeTab === "approved" && karya.status !== "approved") return false;
+    if (activeTab === "rejected" && karya.status !== "rejected") return false;
+    
+    // Category filter
+    if (activeCategory !== "all" && karya.category !== activeCategory) return false;
+    
+    return true;
+  });
+
+  const totalPages = Math.ceil(filteredList.length / ITEMS_PER_PAGE);
+  const paginatedList = filteredList.slice(0, currentPage * ITEMS_PER_PAGE);
+
+  const counts = {
+    all: karyaList.length,
+    pending: karyaList.filter(k => k.status === "pending" || k.status === "deletion_pending").length,
+    approved: karyaList.filter(k => k.status === "approved").length,
+    rejected: karyaList.filter(k => k.status === "rejected").length,
+  };
+
+  const TABS = [
+    { id: "all",      label: "Semua",  count: counts.all },
+    { id: "pending",  label: "Proses", count: counts.pending },
+    { id: "approved", label: "Publik", count: counts.approved },
+    { id: "rejected", label: "Ditolak",count: counts.rejected },
+  ];
+
   return (
     <>
-      <div className="space-y-4">
-        {karyaList.map((karya) => (
-          <motion.div
-            key={karya.id}
-            whileHover={{ y: -4, scale: 1.005 }}
-            transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="flex flex-col md:flex-row md:items-start justify-between p-5 rounded-2xl border border-outline-variant/30 bg-surface shadow-sm hover:shadow-md hover:border-outline-variant/60 transition-colors gap-4"
-          >
-
-            {/* Thumbnail */}
-            <div className="shrink-0">
-              {karya.image_url ? (
-                <img
-                  src={karya.image_url}
-                  alt={karya.title}
-                  className="w-24 h-20 md:w-28 md:h-22 object-cover rounded-xl border border-outline-variant/20"
-                />
-              ) : (
-                <div className="w-24 h-20 md:w-28 rounded-xl bg-surface-variant/40 border border-outline-variant/20 flex items-center justify-center text-on-surface-variant/40">
-                  <FiFileText size={28} />
-                </div>
-              )}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-1 flex-wrap">
-                <h3 className="font-bold text-lg text-on-surface truncate">{karya.title}</h3>
-                <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-surface-variant text-on-surface-variant uppercase tracking-wider shrink-0">
-                  {karya.category}
-                </span>
-              </div>
-              <p className="text-sm text-on-surface-variant line-clamp-1 mb-2">
-                {karya.description}
-              </p>
-              <div className="flex items-center gap-4 text-xs font-medium flex-wrap">
-                <span className="text-on-surface-variant/70">
-                  Diunggah pada {new Date(karya.created_at).toLocaleDateString('id-ID')}
-                </span>
-                {karya.status === 'approved' && (
-                  <div className="flex items-center gap-2">
-                    <span className="flex items-center gap-1.5 text-on-surface bg-surface-variant/30 px-2.5 py-1 rounded-md">
-                      <FiUsers size={12} className="text-[var(--color-primary)]" />
-                      {karya.views || 0} Kali Dilihat
-                    </span>
-                    <span className="flex items-center gap-1.5 text-on-surface bg-surface-variant/30 px-2.5 py-1 rounded-md">
-                      <FiHeart size={12} className="text-red-500" />
-                      {karya.likes || 0} Disukai
-                    </span>
-                  </div>
+      {/* ── Tabs & Filters ────────────────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-4 justify-between items-start sm:items-center">
+        <LayoutGroup>
+          <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar">
+            {TABS.map((tab) => (
+              <motion.button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`relative px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${
+                  activeTab === tab.id
+                    ? "text-white"
+                    : "bg-surface-variant/30 text-on-surface hover:bg-surface-variant/60"
+                }`}
+              >
+                {/* Animated pill background */}
+                {activeTab === tab.id && (
+                  <motion.span
+                    layoutId="active-tab-pill"
+                    className="absolute inset-0 rounded-full bg-[var(--color-primary)] shadow-md shadow-primary/20"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
                 )}
-              </div>
-            </div>
+                <span className="relative z-10">
+                  {tab.label}{" "}
+                  <span className="ml-1 opacity-80 font-medium">({tab.count})</span>
+                </span>
+              </motion.button>
+            ))}
+          </div>
+        </LayoutGroup>
 
-            <div className="shrink-0 flex flex-wrap md:flex-col md:items-end gap-2 mt-2 md:mt-0">
-              {/* Status Badges */}
-              {karya.status === 'pending' && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 font-semibold text-sm border border-amber-100 w-fit">
-                  <FiClock size={16} /> Menunggu Review
-                </div>
-              )}
-              {karya.status === 'approved' && (
-                <div className="flex flex-col gap-2 w-fit">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 text-green-600 font-semibold text-sm border border-green-100">
-                    <FiCheckCircle size={16} /> Disetujui (Publik)
-                  </div>
-                  {karya.pending_edits && !karya.edit_reject_reason && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 font-semibold text-sm border border-amber-100 w-fit">
-                      <FiClock size={16} /> Edit Menunggu Review
-                    </div>
-                  )}
-                  {karya.edit_reject_reason && (
-                    <button
-                      onClick={() => setRejectModalData({ id: karya.id, title: "Usulan Edit Ditolak", message: karya.edit_reject_reason, type: 'edit' })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-sm border border-red-100 w-fit transition-colors"
-                    >
-                      <FiAlertCircle size={16} /> Edit Ditolak (Lihat Pesan)
-                    </button>
-                  )}
-                  {karya.deletion_reject_reason && (
-                    <button
-                      onClick={() => setRejectModalData({ id: karya.id, title: "Permintaan Hapus Ditolak", message: karya.deletion_reject_reason, type: 'deletion' })}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-600 font-semibold text-sm border border-orange-100 w-fit transition-colors"
-                    >
-                      <FiAlertCircle size={16} /> Hapus Ditolak (Lihat Pesan)
-                    </button>
-                  )}
-                </div>
-              )}
-              {karya.status === 'rejected' && (
-                <div className="flex flex-col gap-2 w-fit">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 font-semibold text-sm border border-red-100 w-fit">
-                    <FiAlertCircle size={16} /> Pengajuan Ditolak
-                  </div>
-                  {karya.reject_reason && (
-                    <button
-                      onClick={() => setRejectModalData({ id: karya.id, title: "Karya Ditolak", message: karya.reject_reason, type: 'upload' })}
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-sm border border-red-100 w-full transition-colors"
-                    >
-                      Lihat Catatan Admin
-                    </button>
-                  )}
-                </div>
-              )}
-              {karya.status === 'deletion_pending' && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 text-purple-600 font-semibold text-sm border border-purple-100 w-fit">
-                  <FiClock size={16} /> Menunggu Hapus
-                </div>
-              )}
-              {karya.status === 'deleted' && (
-                <div className="flex flex-col gap-2 w-fit">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 font-semibold text-sm border border-gray-300 w-fit shadow-sm">
-                    <FiTrash2 size={16} /> Telah Dihapus Admin
-                  </div>
-                </div>
-              )}
+        <select
+          value={activeCategory}
+          onChange={(e) => setActiveCategory(e.target.value)}
+          className="px-4 py-2 rounded-xl text-sm font-bold bg-surface-variant/30 border border-outline-variant/30 outline-none focus:ring-2 focus:ring-primary text-on-surface transition-shadow"
+        >
+          <option value="all">Semua Kategori</option>
+          <option value="Technology">Aplikasi Web & Sistem</option>
+          <option value="Programming">Aplikasi Mobile</option>
+          <option value="Research">Karya Tulis & Jurnal</option>
+          <option value="IoT">Proyek IoT</option>
+          <option value="Multimedia">Desain & Lainnya</option>
+        </select>
+      </div>
 
-              <div className="flex gap-2 w-full md:w-auto mt-3 md:mt-0">
-                {karya.status !== 'deletion_pending' && karya.status !== 'deleted' && (
-                  <div className="relative flex-1 md:flex-none">
-                    <Link
-                      href={`/dashboard/edit/${karya.id}`}
-                      className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-variant/50 text-on-surface-variant font-semibold text-sm border border-outline-variant/30 hover:bg-[var(--color-primary)] hover:text-white hover:border-[var(--color-primary)] transition-colors"
-                    >
-                      <FiEdit2 size={14} /> Edit
-                    </Link>
-                    {karya.status === 'rejected' && (
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 mr-4 w-[220px] text-center z-10 pointer-events-none hidden md:block animate-pulse">
-                        <div className="bg-[var(--color-primary)] text-white text-xs leading-relaxed font-bold py-2.5 px-4 rounded-xl shadow-lg relative">
-                          Jangan menyerah! Yuk perbaiki dan ajukan ulang karyamu 💪
-                          <div className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 bg-[var(--color-primary)] rotate-45 rounded-sm"></div>
+      {/* ── Card List ─────────────────────────────────────────── */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab + activeCategory}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+          className="grid grid-cols-1 xl:grid-cols-2 gap-4"
+        >
+          {filteredList.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center py-10 bg-surface-variant/10 rounded-2xl border border-dashed border-outline-variant/30"
+            >
+              <p className="text-sm text-on-surface-variant font-medium">Tidak ada karya di kategori ini.</p>
+            </motion.div>
+          ) : (
+            <AnimatePresence initial={false}>
+              {paginatedList.map((karya, index) => (
+                <motion.div
+                  key={karya.id}
+                  layout
+                  initial={{ opacity: 0, y: 20, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -30, scale: 0.95, transition: { duration: 0.22 } }}
+                  transition={{
+                    delay: index * 0.06,
+                    duration: 0.38,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  whileHover={{ y: -4, scale: 1.005 }}
+                  whileTap={{ scale: 0.995 }}
+                  className="flex flex-col p-5 rounded-2xl border border-outline-variant/30 bg-surface shadow-sm hover:shadow-md hover:border-outline-variant/60 transition-colors gap-4"
+                >
+                  {/* TOP: Thumbnail & Info */}
+                  <div className="flex gap-4 items-start">
+                    {/* Thumbnail */}
+                    <div className="shrink-0">
+                      {karya.image_url ? (
+                        <motion.img
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: index * 0.06 + 0.1 }}
+                          src={karya.image_url}
+                          alt={karya.title}
+                          className="w-20 h-20 sm:w-28 sm:h-24 object-cover rounded-xl border border-outline-variant/20"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 sm:w-28 sm:h-24 rounded-xl bg-surface-variant/40 border border-outline-variant/20 flex items-center justify-center text-on-surface-variant/40">
+                          <FiFileText size={28} />
                         </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold px-2 py-1 rounded-md bg-surface-variant text-on-surface-variant uppercase tracking-wider shrink-0">
+                          {getCategoryLabel(karya.category)}
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-lg text-on-surface truncate">{karya.title}</h3>
+                      <p className="text-sm text-on-surface-variant line-clamp-2 mt-1">
+                        {karya.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* MIDDLE: Stats & Status Badges */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-outline-variant/10">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-medium text-on-surface-variant/70">
+                        Diunggah: {new Date(karya.created_at).toLocaleDateString('id-ID')}
+                      </span>
+                      {karya.status === 'approved' && (
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center gap-1.5 text-on-surface bg-surface-variant/30 px-2 py-1 rounded-md text-[11px] font-medium">
+                            <FiUsers size={10} className="text-[var(--color-primary)]" />
+                            {karya.views || 0} Dilihat
+                          </span>
+                          <span className="flex items-center gap-1.5 text-on-surface bg-surface-variant/30 px-2 py-1 rounded-md text-[11px] font-medium">
+                            <FiHeart size={10} className="text-red-500" />
+                            {karya.likes || 0} Disukai
+                          </span>
+                        </div>
+                      )}
+                      {karya.status === 'rejected' && (
+                        <p className="text-[11px] font-medium text-red-500/90 flex items-center gap-1.5">
+                          💡 <strong>Jangan menyerah!</strong> Perbaiki & ajukan ulang.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="shrink-0 flex flex-col gap-1.5">
+                      {/* Status Badges */}
+                      {karya.status === 'pending' && (
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 text-amber-600 font-semibold text-xs border border-amber-100 w-fit">
+                          <FiClock size={14} className="animate-spin" style={{ animationDuration: '3s' }} />
+                          Menunggu Review
+                        </div>
+                      )}
+                      {karya.status === 'approved' && (
+                        <div className="flex flex-col gap-1.5 w-fit items-end">
+                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-green-50 text-green-600 font-semibold text-xs border border-green-100">
+                            <FiCheckCircle size={14} /> Disetujui (Publik)
+                          </div>
+                          {karya.pending_edits && !karya.edit_reject_reason && (
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 text-amber-600 font-semibold text-xs border border-amber-100 w-fit">
+                              <FiClock size={14} /> Edit Menunggu Review
+                            </div>
+                          )}
+                          {karya.edit_reject_reason && (
+                            <button
+                              onClick={() => setRejectModalData({ id: karya.id, title: "Usulan Edit Ditolak", message: karya.edit_reject_reason, type: 'edit' })}
+                              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs border border-red-100 w-fit transition-colors"
+                            >
+                              <FiAlertCircle size={14} /> Edit Ditolak
+                            </button>
+                          )}
+                          {karya.deletion_reject_reason && (
+                            <button
+                              onClick={() => setRejectModalData({ id: karya.id, title: "Permintaan Hapus Ditolak", message: karya.deletion_reject_reason, type: 'deletion' })}
+                              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-600 font-semibold text-xs border border-orange-100 w-fit transition-colors"
+                            >
+                              <FiAlertCircle size={14} /> Hapus Ditolak
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {karya.status === 'rejected' && (
+                        <div className="flex flex-col gap-1.5 w-fit items-end">
+                          <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-50 text-red-600 font-semibold text-xs border border-red-100 w-fit">
+                            <FiAlertCircle size={14} /> Pengajuan Ditolak
+                          </div>
+                          {karya.reject_reason && (
+                            <button
+                              onClick={() => setRejectModalData({ id: karya.id, title: "Karya Ditolak", message: karya.reject_reason, type: 'upload' })}
+                              className="flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs border border-red-100 w-full transition-colors"
+                            >
+                              Lihat Catatan
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {karya.status === 'deletion_pending' && (
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-50 text-purple-600 font-semibold text-xs border border-purple-100 w-fit">
+                          <FiClock size={14} /> Menunggu Hapus
+                        </div>
+                      )}
+                      {karya.status === 'deleted' && (
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gray-100 text-gray-700 font-semibold text-xs border border-gray-300 w-fit shadow-sm">
+                          <FiTrash2 size={14} /> Dihapus Admin
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* BOTTOM: Action buttons */}
+                  <div className="flex gap-2 w-full pt-1">
+                    {karya.status !== 'deleted' && (
+                      <div className="relative flex-1">
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Link
+                            href={`/karya/${karya.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold text-sm border border-[var(--color-primary)]/20 hover:bg-[var(--color-primary)] hover:text-white transition-colors"
+                          >
+                            <FiEye size={14} /> Lihat Halaman
+                          </Link>
+                        </motion.div>
                       </div>
                     )}
-                  </div>
-                )}
 
-                {karya.status === 'deleted' ? (
-                  <button
-                    onClick={() => hideDeletedKarya(karya.id)}
-                    disabled={isSubmitting}
-                    className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-variant/50 text-on-surface-variant font-semibold text-sm border border-outline-variant/30 hover:bg-gray-700 hover:text-white hover:border-gray-700 transition-colors w-fit disabled:opacity-50"
-                  >
-                    <FiX size={14} /> Tutup & Hilangkan
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleDelete(karya)}
-                    disabled={karya.status === 'deletion_pending'}
-                    className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-variant/50 text-on-surface-variant font-semibold text-sm border border-outline-variant/30 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors w-fit disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <FiTrash2 size={14} /> Hapus
-                  </button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+                    {karya.status !== 'deletion_pending' && karya.status !== 'deleted' && (
+                      <div className="relative flex-1">
+                        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                          <Link
+                            href={`/dashboard/edit/${karya.id}`}
+                            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-surface-variant/50 text-on-surface-variant font-semibold text-sm border border-outline-variant/30 hover:bg-[var(--color-primary)] hover:text-white hover:border-[var(--color-primary)] transition-colors"
+                          >
+                            <FiEdit2 size={14} /> Edit
+                          </Link>
+                        </motion.div>
+                      </div>
+                    )}
+
+                    {karya.status === 'deleted' ? (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => hideDeletedKarya(karya.id)}
+                        disabled={isSubmitting}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-surface-variant/50 text-on-surface-variant font-semibold text-sm border border-outline-variant/30 hover:bg-gray-700 hover:text-white hover:border-gray-700 transition-colors w-full disabled:opacity-50"
+                      >
+                        <FiX size={14} /> Tutup & Hilangkan
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleDelete(karya)}
+                        disabled={karya.status === 'deletion_pending'}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-surface-variant/50 text-on-surface-variant font-semibold text-sm border border-outline-variant/30 hover:bg-red-500 hover:text-white hover:border-red-500 transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <FiTrash2 size={14} /> Hapus
+                      </motion.button>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* ── Pagination (Load More) ─────────────────────────────────────────── */}
+      {filteredList.length > 0 && currentPage < totalPages && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex justify-center mt-8 mb-4"
+        >
+          <button
+            onClick={() => setCurrentPage(p => p + 1)}
+            className="px-6 py-2.5 rounded-xl bg-surface-variant/50 text-on-surface-variant font-bold text-sm hover:bg-[var(--color-primary)] hover:text-white transition-colors border border-outline-variant/30"
+          >
+            Tampilkan Lebih Banyak
+          </button>
+        </motion.div>
+      )}
 
       {/* Rejection Modal */}
       <AnimatePresence>

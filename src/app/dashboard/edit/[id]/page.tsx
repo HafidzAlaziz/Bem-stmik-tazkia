@@ -8,8 +8,19 @@ import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
 import ImageUpload from "@/components/ui/ImageUpload";
 import { motion, AnimatePresence } from "framer-motion";
+import TechStackSelect from "@/components/upload/TechStackSelect";
+import KTIToolsSelect from "@/components/upload/KTIToolsSelect";
+import IoTComponentSelect from "@/components/upload/IoTComponentSelect";
 
-const KATEGORI_OPTIONS = ["Technology", "UI/UX", "Research", "Programming", "Community Service", "Multimedia"];
+const CATEGORY_MAP: Record<string, string> = {
+  "Technology": "Aplikasi Web & Sistem",
+  "Programming": "Aplikasi Mobile",
+  "Research": "Karya Tulis & Jurnal",
+  "IoT": "Proyek IoT",
+  "Multimedia": "Desain & Lainnya"
+};
+
+const getCategoryLabel = (id: string) => CATEGORY_MAP[id] || id;
 
 export default function EditKaryaPage() {
   const router = useRouter();
@@ -145,14 +156,14 @@ export default function EditKaryaPage() {
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
+      if (isDirty && !isLoading) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isDirty]);
+  }, [isDirty, isLoading]);
 
   const handleBackNavigation = (e: React.MouseEvent, url: string) => {
     if (isDirty) {
@@ -225,14 +236,15 @@ export default function EditKaryaPage() {
     if (!formData.description.trim()) return scrollToAndSetInvalid("input-description", "Deskripsi/Abstrak wajib diisi!");
     if (!formData.tech_stack.trim()) return scrollToAndSetInvalid("input-tech-stack", "Tech Stack wajib diisi!");
     
-    if (!formData.github_url.trim()) return scrollToAndSetInvalid("input-github-url", "GitHub URL wajib diisi!");
-    else if (!isValidUrl(formData.github_url.trim())) return scrollToAndSetInvalid("input-github-url", "Format GitHub URL tidak valid!");
+    if (formData.github_url.trim() && !isValidUrl(formData.github_url.trim())) return scrollToAndSetInvalid("input-github-url", "Format GitHub URL tidak valid!");
     
     if (!formData.live_url.trim()) return scrollToAndSetInvalid("input-live-url", "Live Demo / Link Karya wajib diisi!");
     else if (!isValidUrl(formData.live_url.trim())) return scrollToAndSetInvalid("input-live-url", "Format Live Demo URL tidak valid!");
     
-    const validFeatures = formData.features.filter(f => f.title.trim() !== "" && f.desc.trim() !== "");
-    if (validFeatures.length === 0) return scrollToAndSetInvalid("input-feature-0-title", "Minimal 1 Fitur Utama harus diisi (Judul & Deskripsi)!");
+    if (formData.category !== "Multimedia") {
+      const validFeatures = formData.features.filter(f => f.title.trim() !== "" && f.desc.trim() !== "");
+      if (validFeatures.length === 0) return scrollToAndSetInvalid("input-feature-0-title", "Minimal 1 Fitur Utama harus diisi (Judul & Deskripsi)!");
+    }
 
     const validTeam = formData.team.filter(t => t.name.trim() !== "" && t.role.trim() !== "");
     if (validTeam.length === 0) return scrollToAndSetInvalid("input-team-0-name", "Minimal 1 Anggota Tim harus diisi (Nama & Peran)!");
@@ -272,14 +284,17 @@ export default function EditKaryaPage() {
         if (error) throw error;
       } else {
         updatePayload.status = 'pending';
+        updatePayload.reject_reason = null;
+        updatePayload.pending_edits = null; // Also clear pending_edits if any just in case
         const { error } = await supabase.from('karya').update(updatePayload).eq('id', karyaId);
         if (error) throw error;
       }
 
       localStorage.removeItem(`karya_edit_draft_${karyaId}`);
       toast("Karya berhasil diperbarui! Silakan tunggu review ulang dari BEM.", "success");
-      router.push('/dashboard');
-      router.refresh();
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1500);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || "Terjadi kesalahan saat menyimpan karya.");
@@ -345,11 +360,10 @@ export default function EditKaryaPage() {
                 <input id="input-title" name="title" type="text" value={formData.title} onChange={handleInput} placeholder="Contoh: Smart Campus Navigation System" className={getInputClass("input-title")} />
               </div>
               <div>
-                <label className={labelClass}>Kategori <span className="text-red-400">*</span></label>
-                <select id="input-category" name="category" value={formData.category} onChange={handleInput} className={getInputClass("input-category")}>
-                  <option value="">Pilih kategori...</option>
-                  {KATEGORI_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
-                </select>
+                <label className={labelClass}>Kategori</label>
+                <div className="w-full px-4 py-3 bg-surface-variant/40 border border-outline-variant/30 rounded-xl text-sm text-on-surface-variant font-medium cursor-not-allowed">
+                  {formData.category ? getCategoryLabel(formData.category) : "Memuat..."}
+                </div>
               </div>
               <div>
                 <label className={labelClass}>Deskripsi / Abstrak <span className="text-red-400">*</span></label>
@@ -364,12 +378,43 @@ export default function EditKaryaPage() {
             </h3>
             <div className="space-y-4">
               <div>
-                <label className={labelClass}>Tech Stack <span className="text-red-400">*</span></label>
-                <input id="input-tech-stack" name="tech_stack" type="text" value={formData.tech_stack} onChange={handleInput} placeholder="Contoh: React, Next.js, Python" className={getInputClass("input-tech-stack")} />
+                <label htmlFor="input-tech-stack" className={labelClass}>
+                  {formData.category === "Research" ? "Tools & Metodologi" : formData.category === "IoT" ? "Komponen Hardware & Software" : "Tech Stack"} <span className="text-red-400">*</span>
+                </label>
+                {formData.category === "Research" ? (
+                  <KTIToolsSelect
+                    value={formData.tech_stack}
+                    onChange={(val) => {
+                      setFormData(prev => ({ ...prev, tech_stack: val }));
+                      if (invalidField === "input-tech-stack") setInvalidField(null);
+                    }}
+                    error={invalidField === "input-tech-stack"}
+                  />
+                ) : formData.category === "IoT" ? (
+                  <IoTComponentSelect
+                    value={formData.tech_stack}
+                    onChange={(val) => {
+                      setFormData(prev => ({ ...prev, tech_stack: val }));
+                      if (invalidField === "input-tech-stack") setInvalidField(null);
+                    }}
+                    error={invalidField === "input-tech-stack"}
+                  />
+                ) : formData.category === "Multimedia" ? (
+                  <input id="input-tech-stack" name="tech_stack" type="text" value={formData.tech_stack} onChange={handleInput} placeholder="Contoh: Premiere Pro, Photoshop, Canva..." className={getInputClass("input-tech-stack")} />
+                ) : (
+                  <TechStackSelect 
+                    value={formData.tech_stack} 
+                    onChange={(val) => {
+                      setFormData(prev => ({ ...prev, tech_stack: val }));
+                      if (invalidField === "input-tech-stack") setInvalidField(null);
+                    }}
+                    error={invalidField === "input-tech-stack"}
+                  />
+                )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass}>GitHub Repository <span className="text-red-400">*</span></label>
+                  <label className={labelClass}>GitHub Repository</label>
                   <input id="input-github-url" name="github_url" type="url" value={formData.github_url} onChange={handleInput} placeholder="https://github.com/..." className={getInputClass("input-github-url")} />
                 </div>
                 <div>
@@ -383,7 +428,7 @@ export default function EditKaryaPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider flex items-center gap-2">
-                <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> Fitur Utama <span className="text-red-400 normal-case">*</span>
+                <span className="w-1 h-4 bg-[var(--color-secondary)] rounded-full block" /> Fitur Utama {formData.category !== "Multimedia" && <span className="text-red-400 normal-case">*</span>}
               </h3>
               <button type="button" onClick={addFitur} className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
                 <FiPlus size={14} /> Tambah Fitur

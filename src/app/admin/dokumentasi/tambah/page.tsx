@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/Toast";
 import { FiArrowLeft, FiSave, FiPlus, FiX, FiUpload, FiImage, FiLoader } from "react-icons/fi";
 import { saveKegiatan } from "@/app/admin/kegiatan/actions";
 import { createClient } from "@/utils/supabase/client";
+import { compressImage } from "@/lib/imageCompression";
 
 const CATEGORIES = ["Event", "Sosial", "Internal", "Seminar", "Galeri", "Lainnya"];
 
@@ -32,11 +33,14 @@ function PhotoSlot({
 
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
+      // Kompres file sebelum upload (max 1MB, 1920px)
+      const compressedFile = await compressImage(file, 1, 1920);
+
+      const ext = compressedFile.name.split(".").pop();
       const fileName = `${Math.random().toString(36).slice(2)}_${Date.now()}.${ext}`;
       const { data, error } = await supabase.storage
         .from("public_images")
-        .upload(`kabinet/${fileName}`, file, { cacheControl: "3600", upsert: false });
+        .upload(`kabinet/${fileName}`, compressedFile, { cacheControl: "3600", upsert: false });
       if (error) throw error;
       const { data: { publicUrl } } = supabase.storage.from("public_images").getPublicUrl(`kabinet/${fileName}`);
       onUpload(index, publicUrl);
@@ -175,10 +179,13 @@ export default function TambahDokumentasiPage() {
         errors.push(`${file.name} melebihi 5MB.`);
         return null;
       }
+
+      // Kompres file sebelum upload (max 1MB, 1920px)
+      const compressedFile = await compressImage(file, 1, 1920);
       
-      const ext = file.name.split(".").pop();
+      const ext = compressedFile.name.split(".").pop();
       const fileName = `${Math.random().toString(36).slice(2)}_${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public_images").upload(`kabinet/${fileName}`, file, { cacheControl: "3600" });
+      const { error } = await supabase.storage.from("public_images").upload(`kabinet/${fileName}`, compressedFile, { cacheControl: "3600" });
       if (error) {
         errors.push(`Gagal upload ${file.name}: ${error.message}`);
         return null;

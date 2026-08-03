@@ -5,6 +5,18 @@ import { FiGithub, FiExternalLink, FiHeart, FiLayers, FiEye, FiArrowRight } from
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { getTechStack } from "@/lib/techStack";
+import { getKTITool } from "@/lib/ktiTools";
+import { getIoTComponent } from "@/lib/iotComponents";
+import Link from "next/link";
+
+const CATEGORY_MAP: Record<string, string> = {
+  "Technology": "Aplikasi Web & Sistem",
+  "Programming": "Aplikasi Mobile",
+  "Research": "Karya Tulis & Jurnal",
+  "IoT": "Proyek IoT",
+  "Multimedia": "Desain & Lainnya",
+};
 
 export interface ProjectData {
   id: string;
@@ -15,7 +27,10 @@ export interface ProjectData {
   github_url?: string;
   cover_image?: string;
   likes_count: number;
+  views_count?: number;
+  category?: string;
   is_featured?: boolean;
+  created_at?: string;
 }
 
 interface ProjectCardProps {
@@ -62,9 +77,58 @@ export default function ProjectCard({ project, onLike }: ProjectCardProps) {
       </div>
       {/* Content */}
       <div className="p-6 flex flex-col flex-grow">
-        <span className="text-[var(--color-secondary)] text-xs font-bold tracking-wider uppercase mb-3 block">
-          {project.tech_stack?.slice(0, 2).join(" • ") || "Project"}
-        </span>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {project.tech_stack && project.tech_stack.length > 0 ? (
+            project.tech_stack.slice(0, 3).map((stack) => {
+              const isKTI = project.category === "Research";
+              const isIoT = project.category === "IoT";
+              const ktiDef = isKTI ? getKTITool(stack) : undefined;
+              const iotDef = isIoT ? getIoTComponent(stack) : undefined;
+              const techDef = (!ktiDef && !iotDef) ? getTechStack(stack) : undefined;
+              const def = ktiDef ?? iotDef ?? techDef;
+              
+              if (def) {
+                const Icon = def.icon;
+                return (
+                  <span
+                    key={stack}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border"
+                    style={{
+                      backgroundColor: `${def.color}15`,
+                      color: def.color,
+                      borderColor: `${def.color}30`,
+                    }}
+                  >
+                    <Icon size={10} />
+                    {def.label}
+                  </span>
+                );
+              }
+              // Fallback for unmapped stack
+              return (
+                <span
+                  key={stack}
+                  className="px-2 py-0.5 rounded bg-surface-variant/30 text-on-surface-variant border border-outline-variant/30 text-[10px] font-bold tracking-wider uppercase"
+                >
+                  {stack}
+                </span>
+              );
+            })
+          ) : (
+            <span className="text-[var(--color-secondary)] text-xs font-bold tracking-wider uppercase">Project</span>
+          )}
+          {project.tech_stack && project.tech_stack.length > 3 && (
+            <span className="px-1.5 py-0.5 rounded bg-surface-variant/20 text-on-surface-variant text-[10px] font-bold">
+              +{project.tech_stack.length - 3}
+            </span>
+          )}
+        </div>
+        {/* Category Badge */}
+        {(project as any).category && (
+          <span className="text-secondary text-xs font-bold tracking-wider uppercase mb-2 block">
+            {CATEGORY_MAP[(project as any).category] || (project as any).category}
+          </span>
+        )}
         <h3 className="text-xl font-bold text-[var(--color-primary)] mb-3 line-clamp-2">
           {project.title}
         </h3>
@@ -91,24 +155,24 @@ export default function ProjectCard({ project, onLike }: ProjectCardProps) {
           </div>
           <div className="flex items-center gap-1.5 group/stat cursor-pointer hover:text-blue-500 transition-colors">
             <FiEye className="text-on-surface-variant/70 group-hover/stat:text-blue-500 transition-colors" />
-            <span>{(project as any).views || 0}</span>
+            <span>{project.views_count || (project as any).views || 0}</span>
           </div>
         </div>
 
         {/* Footer */}
         <div className="flex justify-between items-center pt-4 border-t border-outline-variant/20">
-          <span className="text-on-surface-variant/70 text-sm">
-            {(project as any).created_at ? new Date((project as any).created_at).toLocaleDateString('id-ID') : new Date().toLocaleDateString('id-ID')}
+          <span className="text-on-surface-variant/70 text-[13px] font-medium">
+            {project.created_at || (project as any).created_at
+              ? new Date(project.created_at || (project as any).created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+              : ''}
           </span>
-          <a
-            href={project.demo_url || project.github_url || "#"}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href={`/karya/${project.id}`}
             onClick={(e) => e.stopPropagation()}
             className="text-[var(--color-primary)] text-sm font-semibold flex items-center gap-1 group-hover:gap-2 transition-all"
           >
             View Details <FiArrowRight />
-          </a>
+          </Link>
         </div>
       </div>
     </motion.div>

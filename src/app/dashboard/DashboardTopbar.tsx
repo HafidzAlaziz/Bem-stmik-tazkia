@@ -7,13 +7,14 @@ import { createClient } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import MahasiswaCard from "@/components/mahasiswa/MahasiswaCard";
 import { useRouter } from "next/navigation";
+import UserNotificationBell from "@/components/layout/UserNotificationBell";
 
 export default function DashboardTopbar({ user }: { user?: any }) {
   const supabase = createClient();
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
   const [hasCompletedProfile, setHasCompletedProfile] = useState<boolean | null>(null);
-  const [hideProfileTooltip, setHideProfileTooltip] = useState(false);
+  const [hideProfileTooltip, setHideProfileTooltip] = useState(true);
   const [showCard, setShowCard] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -33,6 +34,20 @@ export default function DashboardTopbar({ user }: { user?: any }) {
     };
     checkProfile();
   }, [user, supabase]);
+
+  useEffect(() => {
+    if (hasCompletedProfile === false) {
+      const hasSeen = localStorage.getItem("hasSeenProfileTooltip");
+      if (!hasSeen) {
+        setHideProfileTooltip(false);
+        const timer = setTimeout(() => {
+          setHideProfileTooltip(true);
+          localStorage.setItem("hasSeenProfileTooltip", "true");
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [hasCompletedProfile]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -85,8 +100,14 @@ export default function DashboardTopbar({ user }: { user?: any }) {
     <div className="fixed top-6 right-6 md:top-8 md:right-8 z-50 flex items-center justify-end pointer-events-none">
       
       {/* Profile Info Bubble */}
-      <div className="flex items-center gap-5 relative pointer-events-auto bg-white/80 dark:bg-surface/80 backdrop-blur-xl rounded-full shadow-[0_4px_20px_rgba(27,64,134,0.15)] border border-[var(--color-primary)]/30 pl-6 pr-2.5 py-2 transition-all hover:shadow-[0_8px_25px_rgba(27,64,134,0.25)] hover:border-[var(--color-secondary)]/50" ref={dropdownRef}>
+      <div className="flex items-center gap-3 md:gap-5 relative pointer-events-auto bg-white/80 dark:bg-surface/80 backdrop-blur-xl rounded-full shadow-[0_4px_20px_rgba(27,64,134,0.15)] border border-[var(--color-primary)]/30 pl-3 md:pl-6 pr-2.5 py-2 transition-all hover:shadow-[0_8px_25px_rgba(27,64,134,0.25)] hover:border-[var(--color-secondary)]/50" ref={dropdownRef}>
         
+        {/* Lonceng Notifikasi */}
+        <UserNotificationBell isScrolled={true} isHome={false} />
+
+        {/* Garis Pembatas */}
+        <div className="w-px h-6 bg-outline-variant/30 mx-1 hidden sm:block"></div>
+
         {/* Nama Akun */}
         <div className="text-right hidden sm:block">
           <p className="text-sm font-bold text-on-surface leading-tight drop-shadow-sm">{fullName}</p>
@@ -152,11 +173,11 @@ export default function DashboardTopbar({ user }: { user?: any }) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="absolute top-full right-0 mt-4 z-50 animate-bounce cursor-pointer w-max"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setHideProfileTooltip(true); }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setHideProfileTooltip(true); localStorage.setItem("hasSeenProfileTooltip", "true"); }}
               >
                 <div className="bg-[var(--color-secondary)] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-secondary/30 relative flex items-center gap-2">
-                  <span>✨ Ayo sesuaikan profilmu agar menarik!</span>
-                  <button className="text-white/80 hover:text-white" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setHideProfileTooltip(true); }}>
+                  <span>Tempat profilmu ada di sini, ayo sesuaikan!</span>
+                  <button className="text-white/80 hover:text-white" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setHideProfileTooltip(true); localStorage.setItem("hasSeenProfileTooltip", "true"); }}>
                     <FiX size={14} />
                   </button>
                   {/* Triangle Pointer */}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FiHome, FiLogOut } from "react-icons/fi";
 import { createClient } from "@/utils/supabase/client";
+import AdminNotificationBell from "./AdminNotificationBell";
 
 export default function AdminTopbar({ user }: { user?: any }) {
   const router = useRouter();
@@ -43,6 +44,11 @@ export default function AdminTopbar({ user }: { user?: any }) {
           </div>
         )}
       </div>
+
+      <div className="w-px h-8 bg-outline-variant/30"></div>
+
+      {/* Notification Bell */}
+      <AdminNotificationBell />
 
       <div className="w-px h-8 bg-outline-variant/30"></div>
 

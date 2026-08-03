@@ -7,6 +7,7 @@ import { FiSearch, FiArrowRight, FiHeart, FiEye, FiUpload, FiInfo } from "react-
 import { motion } from "framer-motion";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { createClient } from "@/utils/supabase/client";
+import ProjectCard, { ProjectData } from "@/components/mahasiswa/ProjectCard";
 
 function LikeButton({ initialLikes }: { initialLikes: number }) {
   const [liked, setLiked] = useState(false);
@@ -33,13 +34,23 @@ function LikeButton({ initialLikes }: { initialLikes: number }) {
   );
 }
 
+const CATEGORY_MAP: Record<string, string> = {
+  "Technology": "Aplikasi Web & Sistem",
+  "Programming": "Aplikasi Mobile",
+  "Research": "Karya Tulis & Jurnal",
+  "IoT": "Proyek IoT",
+  "Multimedia": "Desain & Lainnya",
+};
+
+const getCategoryLabel = (id: string) => CATEGORY_MAP[id] || id;
+
 const categories = [
   "All Projects",
   "Technology",
-  "Community service",
-  "Research",
-  "UI/UX",
   "Programming",
+  "Research",
+  "IoT",
+  "Multimedia",
 ];
 
 export default function KaryaInovasiPage() {
@@ -82,6 +93,17 @@ export default function KaryaInovasiPage() {
     };
 
     fetchProjects();
+
+    const channel = supabase
+      .channel('realtime_public_karya')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'karya' }, () => {
+        fetchProjects();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [supabase]);
 
   // Filter projects based on category and search
@@ -192,7 +214,7 @@ export default function KaryaInovasiPage() {
                     : "bg-surface text-[var(--color-on-surface-variant)] border border-outline-variant/30 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                     }`}
                 >
-                  {category}
+                  {category === "All Projects" ? "Semua Proyek" : getCategoryLabel(category)}
                 </button>
               ))}
             </div>
@@ -230,58 +252,32 @@ export default function KaryaInovasiPage() {
             </div>
           ) : paginatedProjects.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-              {paginatedProjects.map((project, index) => (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  key={project.id}
-                  className="bg-surface rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-outline-variant/20 hover:shadow-[0_8px_30px_rgba(27,64,134,0.08)] transition-all duration-300 group flex flex-col h-full"
-                >
-                  {/* Image */}
-                  <div className="relative h-56 w-full overflow-hidden bg-surface-variant/30">
-                    <Image
-                      src={project.image_url || "https://picsum.photos/seed/placeholder/600/400"}
-                      alt={project.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-6 flex flex-col flex-grow">
-                    <span className="text-[var(--color-secondary)] text-xs font-bold tracking-wider uppercase mb-3 block">
-                      {project.category}
-                    </span>
-                    <h3 className="text-xl font-bold text-[var(--color-primary)] mb-3 line-clamp-2">
-                      {project.title}
-                    </h3>
-                    <p className="text-[var(--color-on-surface-variant)] text-sm mb-6 line-clamp-3 flex-grow">
-                      {project.description}
-                    </p>
-
-                    {/* Stats */}
-                    <div className="flex items-center gap-4 mt-auto mb-4 text-on-surface-variant text-sm">
-                      <LikeButton initialLikes={project.likes} />
-                      <div className="flex items-center gap-1.5 group/stat cursor-pointer hover:text-blue-500 transition-colors">
-                        <FiEye className="text-on-surface-variant/70 group-hover/stat:text-blue-500 transition-colors" />
-                        <span>{project.views}</span>
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex justify-between items-center pt-4 border-t border-outline-variant/20">
-                      <span className="text-on-surface-variant/70 text-sm">{new Date(project.created_at).toLocaleDateString('id-ID')}</span>
-                      <Link
-                        href={`/karya/${project.id}`}
-                        className="text-[var(--color-primary)] text-sm font-semibold flex items-center gap-1 group-hover:gap-2 transition-all"
-                      >
-                        View Details <FiArrowRight />
-                      </Link>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+              {paginatedProjects.map((project, index) => {
+                const mappedProject: ProjectData = {
+                  id: project.id,
+                  title: project.title,
+                  description: project.description,
+                  tech_stack: project.tech_stack || [],
+                  demo_url: project.live_url,
+                  github_url: project.github_url,
+                  cover_image: project.image_url,
+                  likes_count: project.likes || 0,
+                  views_count: project.views || 0,
+                  category: project.category,
+                  created_at: project.created_at,
+                };
+                
+                return (
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <ProjectCard project={mappedProject} />
+                  </motion.div>
+                );
+              })}
             </div>
           ) : (
             (() => {
