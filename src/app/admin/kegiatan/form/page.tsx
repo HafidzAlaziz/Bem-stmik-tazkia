@@ -37,10 +37,12 @@ export default function KegiatanFormPage() {
     is_urgent: false,
     is_published: false,
     form_schema: [],
-    speakers: []
+    speakers: [{ name: "", role: "", photo: "" }],
+    max_participants: null
   };
 
   const [formData, setFormData] = useState<Partial<AgendaKegiatan>>(initialFormState);
+  const [requiresRegistration, setRequiresRegistration] = useState(false);
   const [initialData, setInitialData] = useState<Partial<AgendaKegiatan>>(initialFormState);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const toastShown = React.useRef(false);
@@ -69,6 +71,9 @@ export default function KegiatanFormPage() {
           if (data.deadline) data.deadline = data.deadline.split('T')[0];
           setFormData(data);
           setInitialData(JSON.parse(JSON.stringify(data))); // Deep copy for accurate isDirty check
+          if (data.type === 'event' && data.form_schema && data.form_schema.length > 0) {
+            setRequiresRegistration(true);
+          }
         }
         setIsFetching(false);
       });
@@ -111,6 +116,9 @@ export default function KegiatanFormPage() {
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
+    } else if (name === 'max_participants') {
+      const numValue = value === "" ? null : parseInt(value, 10);
+      setFormData(prev => ({ ...prev, [name]: numValue }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -130,6 +138,8 @@ export default function KegiatanFormPage() {
     // --- VALIDASI FORM CUSTOM ---
     const newErrors: Record<string, string> = {};
     
+    if (!formData.image_url?.trim()) newErrors.image_url = "Poster / Gambar Header wajib diisi";
+
     if (formData.type === 'event' || formData.type === 'dokumentasi') {
       if (!formData.title?.trim()) newErrors.title = "Judul kegiatan wajib diisi";
       if (!formData.category?.trim()) newErrors.category = "Kategori wajib diisi";
@@ -186,6 +196,12 @@ export default function KegiatanFormPage() {
         if (input) input.focus();
       }
       return;
+    }
+
+    // Jika Wajib Pendaftaran dinonaktifkan pada Event, hapus form_schema
+    if (formData.type === 'event' && !requiresRegistration) {
+      formData.form_schema = [];
+      formData.max_participants = null;
     }
     // ---------------------
     
@@ -273,7 +289,7 @@ export default function KegiatanFormPage() {
               <label className="text-sm font-bold text-on-surface">Publikasi</label>
               <div className="flex items-center gap-2 mt-1">
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" name="is_published" checked={formData.is_published} onChange={handleChange} className="sr-only peer" />
+                  <input type="checkbox" name="is_published" checked={formData.is_published || false} onChange={handleChange} className="sr-only peer" />
                   <div className="w-11 h-6 bg-surface-variant/50 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   <span className="ml-3 text-sm font-bold text-on-surface">{formData.is_published ? "Live (Ditampilkan)" : "Draft (Disembunyikan)"}</span>
                 </label>
@@ -287,17 +303,37 @@ export default function KegiatanFormPage() {
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-on-surface border-b border-outline-variant/30 pb-2">Informasi Dasar</h3>
             
-            <div id="field-title" className="space-y-2">
-              <label className="text-sm font-bold text-on-surface">Judul Kegiatan / Posisi <span className="text-red-500">*</span></label>
-              <input type="text" name="title" value={formData.title} onChange={handleChange} className={`w-full bg-background border ${formErrors.title ? "border-red-500 bg-red-50" : "border-outline-variant/50"} rounded-xl px-4 py-3 text-sm focus:border-primary outline-none transition-colors`} placeholder="Contoh: BEM Mengajar 2026 atau Web Developer" />
-              {formErrors.title && <p className="text-xs text-red-500 mt-1">{formErrors.title}</p>}
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              <div id="field-image_url" className="md:col-span-4 space-y-2">
+                <label className="text-sm font-bold text-on-surface">Poster / Gambar Header <span className="text-red-500">*</span></label>
+                <ImageUpload 
+                  value={formData.image_url || ""}
+                  onChange={(url) => {
+                    setFormData(prev => ({...prev, image_url: url}));
+                    if (formErrors.image_url) {
+                      setFormErrors(prev => { const newErr = { ...prev }; delete newErr.image_url; return newErr; });
+                    }
+                  }}
+                  className="w-full"
+                />
+                <input type="text" name="image_url" value={formData.image_url || ""} onChange={handleChange} className={`w-full mt-2 bg-background border ${formErrors.image_url ? 'border-red-500 bg-red-50' : 'border-outline-variant/50'} rounded-xl px-3 py-2 text-xs focus:border-primary outline-none transition-colors`} placeholder="Atau paste link URL gambar" />
+                {formErrors.image_url && <p className="text-xs text-red-500 mt-1">{formErrors.image_url}</p>}
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div id="field-category" className="space-y-2">
-                <label className="text-sm font-bold text-on-surface">Kategori <span className="text-red-500">*</span></label>
-                <input type="text" name="category" value={formData.category || ""} onChange={handleChange} className={`w-full bg-background border ${formErrors.category ? "border-red-500 bg-red-50" : "border-outline-variant/50"} rounded-xl px-4 py-3 text-sm focus:border-primary outline-none transition-colors`} placeholder="Contoh: Kaderisasi, Teknologi, Sosial" />
-                {formErrors.category && <p className="text-xs text-red-500 mt-1">{formErrors.category}</p>}
+              <div className="md:col-span-8 space-y-6">
+                <div id="field-title" className="space-y-2">
+                  <label className="text-sm font-bold text-on-surface">Judul Kegiatan / Posisi <span className="text-red-500">*</span></label>
+                  <input type="text" name="title" value={formData.title || ""} onChange={handleChange} className={`w-full bg-background border ${formErrors.title ? "border-red-500 bg-red-50" : "border-outline-variant/50"} rounded-xl px-4 py-3 text-sm focus:border-primary outline-none transition-colors`} placeholder="Contoh: BEM Mengajar 2026 atau Web Developer" />
+                  {formErrors.title && <p className="text-xs text-red-500 mt-1">{formErrors.title}</p>}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div id="field-category" className="space-y-2">
+                    <label className="text-sm font-bold text-on-surface">Kategori <span className="text-red-500">*</span></label>
+                    <input type="text" name="category" value={formData.category || ""} onChange={handleChange} className={`w-full bg-background border ${formErrors.category ? "border-red-500 bg-red-50" : "border-outline-variant/50"} rounded-xl px-4 py-3 text-sm focus:border-primary outline-none transition-colors`} placeholder="Contoh: Kaderisasi, Teknologi, Sosial" />
+                    {formErrors.category && <p className="text-xs text-red-500 mt-1">{formErrors.category}</p>}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -362,7 +398,7 @@ export default function KegiatanFormPage() {
                             <input 
                               type="text" 
                               name={`speaker_${index}_name`}
-                              value={speaker.name} 
+                              value={speaker.name || ""} 
                               onChange={(e) => {
                                 const newSpeakers = [...(formData.speakers || [])];
                                 newSpeakers[index].name = e.target.value;
@@ -381,7 +417,7 @@ export default function KegiatanFormPage() {
                             <input 
                               type="text" 
                               name={`speaker_${index}_role`}
-                              value={speaker.role} 
+                              value={speaker.role || ""} 
                               onChange={(e) => {
                                 const newSpeakers = [...(formData.speakers || [])];
                                 newSpeakers[index].role = e.target.value;
@@ -408,7 +444,7 @@ export default function KegiatanFormPage() {
                             />
                             <input 
                               type="text" 
-                              value={speaker.photo} 
+                              value={speaker.photo || ""} 
                               onChange={(e) => {
                                 const newSpeakers = [...(formData.speakers || [])];
                                 newSpeakers[index].photo = e.target.value;
@@ -433,7 +469,7 @@ export default function KegiatanFormPage() {
                 </div>
                 <div className="space-y-2 pb-2">
                   <label className="flex items-center gap-2 cursor-pointer bg-red-50 text-red-600 px-4 py-3 rounded-xl border border-red-200 hover:bg-red-100 transition-colors">
-                    <input type="checkbox" name="is_urgent" checked={formData.is_urgent} onChange={handleChange} className="w-4 h-4 text-red-600 focus:ring-red-500 rounded" />
+                    <input type="checkbox" name="is_urgent" checked={formData.is_urgent || false} onChange={handleChange} className="w-4 h-4 text-red-600 focus:ring-red-500 rounded" />
                     <span className="text-sm font-bold">Tandai sebagai URGENT (Segera)</span>
                   </label>
                 </div>
@@ -453,25 +489,49 @@ export default function KegiatanFormPage() {
           <div className="space-y-6">
             <h3 className="text-lg font-bold text-on-surface border-b border-outline-variant/30 pb-2">Detail Ekstra</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-              <div className="md:col-span-4 space-y-2">
-                <label className="text-sm font-bold text-on-surface">Poster / Gambar Header</label>
-                <ImageUpload 
-                  value={formData.image_url || ""}
-                  onChange={(url) => setFormData(prev => ({...prev, image_url: url}))}
-                  className="w-full"
-                />
-                <input type="text" name="image_url" value={formData.image_url || ""} onChange={handleChange} className="w-full mt-2 bg-background border border-outline-variant/50 rounded-xl px-3 py-2 text-xs focus:border-primary outline-none" placeholder="Atau paste link URL gambar" />
-              </div>
-
-              <div className="md:col-span-8 space-y-6">
-                {formData.type === 'volunteer' && (
-                  <div className="space-y-2 pb-4 border-b border-outline-variant/20">
-                    <FormBuilder 
-                      fields={formData.form_schema || []} 
-                      onChange={(newFields) => setFormData(prev => ({...prev, form_schema: newFields}))} 
-                    />
+            <div className="space-y-6">
+                {formData.type === 'event' && (
+                  <div className="space-y-4 pb-4 border-b border-outline-variant/20">
+                    <label className="flex items-center gap-3 p-4 border border-outline-variant/50 rounded-xl cursor-pointer hover:bg-surface-variant/20 transition-colors bg-surface">
+                      <div className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={requiresRegistration} 
+                          onChange={(e) => setRequiresRegistration(e.target.checked)} 
+                          className="sr-only peer" 
+                        />
+                        <div className="w-11 h-6 bg-surface-variant/50 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-bold text-on-surface block">Wajibkan Pendaftaran (RSVP)</span>
+                        <span className="text-xs text-on-surface-variant">Buka form pendaftaran kustom dan fitur kuota untuk event ini.</span>
+                      </div>
+                    </label>
                   </div>
+                )}
+
+                {(formData.type === 'volunteer' || (formData.type === 'event' && requiresRegistration)) && (
+                  <>
+                    <div className="space-y-2 pb-4 border-b border-outline-variant/20">
+                      <FormBuilder 
+                        fields={formData.form_schema || []} 
+                        onChange={(newFields) => setFormData(prev => ({...prev, form_schema: newFields}))} 
+                      />
+                    </div>
+                    <div id="field-max_participants" className="space-y-2 pb-4 border-b border-outline-variant/20">
+                      <label className="text-sm font-bold text-on-surface">Kuota Pendaftar (Opsional)</label>
+                      <input 
+                        type="number" 
+                        name="max_participants" 
+                        value={formData.max_participants == null ? "" : formData.max_participants} 
+                        onChange={handleChange} 
+                        className={`w-full md:w-1/2 bg-background border border-outline-variant/50 rounded-xl px-4 py-3 text-sm focus:border-primary outline-none transition-colors`} 
+                        placeholder="Kosongkan jika kuota tidak terbatas" 
+                        min="1"
+                      />
+                      <p className="text-xs text-on-surface-variant mt-1">Sistem akan otomatis menutup pendaftaran jika jumlah pendaftar sudah mencapai angka ini.</p>
+                    </div>
+                  </>
                 )}
 
                 {formData.type === 'event' && (
@@ -487,7 +547,6 @@ export default function KegiatanFormPage() {
                   <textarea name="description" value={formData.description || ""} onChange={handleChange} className={`w-full bg-background border ${formErrors.description ? "border-red-500 bg-red-50" : "border-outline-variant/50"} rounded-xl px-4 py-3 text-sm focus:border-primary outline-none min-h-[150px] transition-colors`} placeholder="Deskripsikan secara lengkap mengenai agenda atau kriteria rekrutmen ini..." />
                   {formErrors.description && <p className="text-xs text-red-500 mt-1">{formErrors.description}</p>}
                 </div>
-              </div>
             </div>
             
             {/* Gallery Section */}
@@ -499,7 +558,7 @@ export default function KegiatanFormPage() {
                       Dokumentasi Foto {formData.type === 'dokumentasi' ? <span className="text-red-500">*</span> : ""}
                     </label>
                     <p className="text-xs text-on-surface-variant font-normal">
-                      {formData.type === 'dokumentasi' ? "(Wajib untuk Dokumentasi)" : "(Tambahkan Manual Khusus Event / Sosial dsb)"}
+                      {formData.type === 'dokumentasi' ? "(Wajib untuk Dokumentasi)" : "(Bisa diisi menyusul setelah event selesai)"}
                     </p>
                     {formErrors.gallery && <p className="text-xs text-red-500 mt-1">{formErrors.gallery}</p>}
                   </div>

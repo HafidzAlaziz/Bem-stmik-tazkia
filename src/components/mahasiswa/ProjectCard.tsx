@@ -8,6 +8,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { getTechStack } from "@/lib/techStack";
 import { getKTITool } from "@/lib/ktiTools";
 import { getIoTComponent } from "@/lib/iotComponents";
+import { getMultimediaTool } from "@/lib/multimediaTools";
 import Link from "next/link";
 
 const CATEGORY_MAP: Record<string, string> = {
@@ -82,10 +83,12 @@ export default function ProjectCard({ project, onLike }: ProjectCardProps) {
             project.tech_stack.slice(0, 3).map((stack) => {
               const isKTI = project.category === "Research";
               const isIoT = project.category === "IoT";
+              const isMultimedia = project.category === "Multimedia";
               const ktiDef = isKTI ? getKTITool(stack) : undefined;
               const iotDef = isIoT ? getIoTComponent(stack) : undefined;
-              const techDef = (!ktiDef && !iotDef) ? getTechStack(stack) : undefined;
-              const def = ktiDef ?? iotDef ?? techDef;
+              const multiDef = isMultimedia ? getMultimediaTool(stack) : undefined;
+              const techDef = (!ktiDef && !iotDef && !multiDef) ? getTechStack(stack) : undefined;
+              const def = ktiDef ?? iotDef ?? multiDef ?? techDef;
               
               if (def) {
                 const Icon = def.icon;

@@ -23,7 +23,7 @@ import {
 import { AgendaKegiatan } from "@/types/agenda";
 import { formatDateToIndo } from "@/utils/dateFormatter";
 
-function AgendaDetailClientContent({ agenda }: { agenda: AgendaKegiatan }) {
+function AgendaDetailClientContent({ agenda, participantCount }: { agenda: AgendaKegiatan, participantCount: number }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const from = searchParams.get("from");
@@ -59,6 +59,11 @@ function AgendaDetailClientContent({ agenda }: { agenda: AgendaKegiatan }) {
   const isLive = eventStatus === "Live";
   const isFinished = eventStatus === "Selesai";
   const isManualDokumentasi = agenda.type === 'dokumentasi';
+  
+  const hasRegistration = agenda.form_schema && agenda.form_schema.length > 0;
+  const maxQuota = agenda.max_participants;
+  const isQuotaFull = maxQuota !== null && maxQuota !== undefined && participantCount >= maxQuota;
+  const remainingQuota = maxQuota !== null && maxQuota !== undefined ? maxQuota - participantCount : null;
 
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null);
   const [flipDirection, setFlipDirection] = React.useState<number>(1);
@@ -211,23 +216,44 @@ function AgendaDetailClientContent({ agenda }: { agenda: AgendaKegiatan }) {
                   {isLive ? 'Event Sedang Berlangsung!' : 'Informasi Kehadiran'}
                 </h3>
                 <p className={`text-xs md:text-sm ${isLive ? 'text-red-100' : 'text-on-surface-variant'}`}>
-                  {agenda.online_link 
-                    ? "Event ini diselenggarakan secara online melalui link yang tersedia." 
-                    : "Event ini tidak menyediakan link online, silakan datang langsung ke lokasi event."}
+                  {hasRegistration 
+                    ? "Event ini mewajibkan pendaftaran (RSVP) bagi para pesertanya."
+                    : agenda.online_link 
+                      ? "Event ini diselenggarakan secara online melalui link yang tersedia." 
+                      : "Event ini tidak menyediakan link online, silakan datang langsung ke lokasi event."}
                 </p>
+                {hasRegistration && (
+                   <p className={`text-xs mt-1 font-bold ${isQuotaFull ? 'text-red-500' : isLive ? 'text-white' : 'text-primary'}`}>
+                     {maxQuota !== null && maxQuota !== undefined 
+                       ? (isQuotaFull ? "Kuota Penuh" : `Sisa Kuota: ${remainingQuota} dari ${maxQuota}`)
+                       : "Kuota Tidak Terbatas"}
+                     {` (Total pendaftar saat ini: ${participantCount})`}
+                   </p>
+                )}
               </div>
             </div>
             
-            {agenda.online_link && (
-              <a 
-                href={agenda.online_link} 
-                target="_blank" 
-                rel="noreferrer"
-                className={`w-full sm:w-auto px-6 py-3 font-extrabold rounded-xl shadow-md transition-all text-center flex items-center justify-center gap-2 text-sm ${isLive ? 'bg-surface text-red-600 hover:bg-red-50 hover:scale-105' : 'bg-primary text-white hover:bg-primary/90'}`}
-              >
-                {isLive ? 'Masuk ke Live' : 'Link Online'} <FiExternalLink size={16} />
-              </a>
-            )}
+            <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3">
+              {agenda.online_link && (
+                <a 
+                  href={agenda.online_link} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className={`w-full sm:w-auto px-6 py-3 font-extrabold rounded-xl shadow-md transition-all text-center flex items-center justify-center gap-2 text-sm ${isLive ? 'bg-surface text-red-600 hover:bg-red-50 hover:scale-105' : 'bg-secondary text-white hover:bg-secondary/90'}`}
+                >
+                  {isLive ? 'Masuk ke Live' : 'Link Online'} <FiExternalLink size={16} />
+                </a>
+              )}
+              {hasRegistration && (
+                <Link 
+                  href={isQuotaFull ? '#' : `/agenda/${agenda.id}/apply`}
+                  className={`w-full sm:w-auto px-6 py-3 font-extrabold rounded-xl shadow-md transition-all text-center flex items-center justify-center gap-2 text-sm ${isQuotaFull ? 'bg-surface-variant text-on-surface-variant cursor-not-allowed' : 'bg-primary text-white hover:bg-primary/90 hover:scale-105'}`}
+                  onClick={(e) => isQuotaFull && e.preventDefault()}
+                >
+                  {isQuotaFull ? 'Kuota Penuh' : 'Daftar Sekarang'}
+                </Link>
+              )}
+            </div>
           </motion.div>
         )}
 
@@ -248,14 +274,21 @@ function AgendaDetailClientContent({ agenda }: { agenda: AgendaKegiatan }) {
                 <p className={`text-xs md:text-sm text-emerald-100`}>
                   Segera daftarkan dirimu sebelum batas waktu pendaftaran berakhir.
                 </p>
+                <p className="text-xs mt-1 font-bold text-emerald-100">
+                  {maxQuota !== null && maxQuota !== undefined 
+                    ? (isQuotaFull ? "Kuota Penuh" : `Sisa Kuota: ${remainingQuota} dari ${maxQuota}`)
+                    : "Kuota Tidak Terbatas"}
+                  {` (Total pendaftar saat ini: ${participantCount})`}
+                </p>
               </div>
             </div>
             
             <Link 
-              href={`/agenda/${agenda.id}/apply`}
-              className={`w-full sm:w-auto px-6 py-3 font-extrabold rounded-xl shadow-md transition-all text-center flex items-center justify-center gap-2 text-sm bg-surface text-emerald-700 hover:bg-emerald-50 hover:scale-105`}
+              href={isQuotaFull ? '#' : `/agenda/${agenda.id}/apply`}
+              className={`w-full sm:w-auto px-6 py-3 font-extrabold rounded-xl shadow-md transition-all text-center flex items-center justify-center gap-2 text-sm ${isQuotaFull ? 'bg-white/30 text-white cursor-not-allowed' : 'bg-surface text-emerald-700 hover:bg-emerald-50 hover:scale-105'}`}
+              onClick={(e) => isQuotaFull && e.preventDefault()}
             >
-              Daftar Sekarang
+              {isQuotaFull ? 'Kuota Penuh' : 'Daftar Sekarang'}
             </Link>
           </motion.div>
         )}
@@ -490,10 +523,10 @@ function AgendaDetailClientContent({ agenda }: { agenda: AgendaKegiatan }) {
   );
 }
 
-export default function AgendaDetailClient({ agenda }: { agenda: AgendaKegiatan }) {
+export default function AgendaDetailClient({ agenda, participantCount = 0 }: { agenda: AgendaKegiatan, participantCount?: number }) {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-background text-primary font-bold">Memuat...</div>}>
-      <AgendaDetailClientContent agenda={agenda} />
+      <AgendaDetailClientContent agenda={agenda} participantCount={participantCount} />
     </Suspense>
   );
 }

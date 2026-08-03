@@ -70,7 +70,8 @@ export async function saveKegiatan(data: Partial<AgendaKegiatan>) {
         gallery: data.gallery || [],
         online_link: data.online_link || null,
         form_schema: data.form_schema || [],
-        speakers: data.speakers || []
+        speakers: data.speakers || [],
+        max_participants: data.max_participants !== undefined ? data.max_participants : null
       })
       .eq("id", data.id);
 
@@ -96,7 +97,8 @@ export async function saveKegiatan(data: Partial<AgendaKegiatan>) {
         gallery: data.gallery || [],
         online_link: data.online_link || null,
         form_schema: data.form_schema || [],
-        speakers: data.speakers || []
+        speakers: data.speakers || [],
+        max_participants: data.max_participants !== undefined ? data.max_participants : null
       }]);
 
     if (error) throw new Error(error.message);

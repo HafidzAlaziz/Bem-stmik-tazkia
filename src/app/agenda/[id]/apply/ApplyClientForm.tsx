@@ -12,7 +12,7 @@ import { formatDateToIndo } from "@/utils/dateFormatter";
 import { useToast } from "@/components/ui/Toast";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
-export default function ApplyClientForm({ agenda, isClosed }: { agenda: AgendaKegiatan, isClosed: boolean }) {
+export default function ApplyClientForm({ agenda, isClosed, isQuotaFull = false }: { agenda: AgendaKegiatan, isClosed: boolean, isQuotaFull?: boolean }) {
   const router = useRouter();
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,7 +35,7 @@ export default function ApplyClientForm({ agenda, isClosed }: { agenda: AgendaKe
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isClosed) return;
+    if (isClosed || isQuotaFull) return;
     
     // Validate required fields and formats
     const newInvalidFields: Record<string, string> = {};
@@ -136,14 +136,14 @@ export default function ApplyClientForm({ agenda, isClosed }: { agenda: AgendaKe
         </div>
         <h1 className="text-3xl font-extrabold text-on-surface mb-4">Pendaftaran Berhasil!</h1>
         <p className="text-on-surface-variant text-lg mb-8">
-          Terima kasih telah mendaftar posisi <strong className="text-on-surface">{agenda.title}</strong>. 
+          Terima kasih telah mendaftar <strong className="text-on-surface">{agenda.title}</strong>. 
           Data kamu telah berhasil tersimpan dalam sistem kami. Silakan tunggu informasi selanjutnya dari panitia.
         </p>
         <Link 
           href={`/agenda/${agenda.id}`}
           className="inline-flex items-center justify-center bg-primary text-white font-bold px-8 py-3.5 rounded-xl hover:bg-primary/90 transition-all hover:-translate-y-1 hover:shadow-lg"
         >
-          Kembali ke Detail Agenda
+          Kembali ke Detail
         </Link>
       </div>
     );
@@ -170,16 +170,18 @@ export default function ApplyClientForm({ agenda, isClosed }: { agenda: AgendaKe
           <p className="text-white/80 text-sm">
             {isClosed 
               ? "Mohon maaf, waktu pendaftaran untuk posisi ini telah berakhir." 
-              : `Batas Pendaftaran: ${formatDateToIndo(agenda.deadline)}`}
+              : isQuotaFull
+                ? "Mohon maaf, kuota pendaftaran untuk event ini telah terisi penuh."
+                : agenda.deadline ? `Batas Pendaftaran: ${formatDateToIndo(agenda.deadline)}` : "Silakan isi formulir di bawah ini."}
           </p>
         </div>
 
         {/* BODY */}
         <div className="p-6 md:p-8">
-          {isClosed ? (
+          {isClosed || isQuotaFull ? (
             <div className="bg-red-50 text-red-600 p-6 rounded-xl border border-red-200 flex flex-col items-center text-center">
               <FiAlertCircle size={32} className="mb-3" />
-              <h3 className="font-bold text-lg mb-1">Pendaftaran Ditutup</h3>
+              <h3 className="font-bold text-lg mb-1">{isQuotaFull ? "Kuota Penuh" : "Pendaftaran Ditutup"}</h3>
               <p className="text-sm opacity-80">Kamu sudah tidak bisa mengirimkan form ini.</p>
             </div>
           ) : (

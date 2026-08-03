@@ -1,6 +1,6 @@
 import React from "react";
 import { notFound } from "next/navigation";
-import { getKegiatanById } from "@/app/admin/kegiatan/actions";
+import { getKegiatanById, getVolunteerApplications } from "@/app/admin/kegiatan/actions";
 import AgendaDetailClient from "./AgendaDetailClient";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -25,5 +25,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  return <AgendaDetailClient agenda={agenda} />;
+  const applications = await getVolunteerApplications(agenda.id);
+  const participantCount = applications ? applications.length : 0;
+
+  return <AgendaDetailClient agenda={agenda} participantCount={participantCount} />;
 }

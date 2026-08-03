@@ -24,10 +24,15 @@ function AgendaPageContent({ data }: { data: AgendaKegiatan[] }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabParam = searchParams.get("tab");
-  const activeTab = tabParam === "volunteer" ? "volunteer" : "event";
+  const [activeTab, setActiveTabState] = React.useState<"event" | "volunteer">(tabParam === "volunteer" ? "volunteer" : "event");
+
+  React.useEffect(() => {
+    setActiveTabState(tabParam === "volunteer" ? "volunteer" : "event");
+  }, [tabParam]);
 
   const setActiveTab = (tab: "event" | "volunteer") => {
-    router.replace(`/agenda?tab=${tab}`, { scroll: false });
+    setActiveTabState(tab);
+    window.history.replaceState(null, '', `/agenda?tab=${tab}`);
   };
 
   const [viewMode, setViewMode] = useState<"grid" | "calendar">("grid");
